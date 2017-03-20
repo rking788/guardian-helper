@@ -182,5 +182,5 @@ func EchoIntentHandler(ctx *gin.Context) {
 	}
 
 	//w.Write(bytes)
-	ctx.String(http.StatusOK, "application/json", bytes)
+	ctx.String(http.StatusOK, string(bytes))
 }
