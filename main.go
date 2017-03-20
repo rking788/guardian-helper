@@ -171,7 +171,7 @@ func dumpRequest(ctx *gin.Context) {
 // Alexa skill related functions
 
 func EchoIntentHandler(ctx *gin.Context) {
-	_ = alexa.GetEchoRequest(ctx.Request)
+	//_ = alexa.GetEchoRequest(ctx.Request)
 
 	response := alexa.NewEchoResponse()
 	response = response.OutputSpeech("You currently have 12 spinmetal on your Warlock.").Card("It happened", "You did it!")
