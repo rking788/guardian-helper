@@ -61,8 +61,8 @@ func main() {
 
 	router.POST("tokens", TokenHandler)
 
-	app := alexa.EchoApplication{AppID: "", Handler: EchoIntentHandler}
-	http.HandleFunc("/echo/guardian-helper", app.Handler)
+	//app := alexa.EchoApplication{AppID: "", Handler: EchoIntentHandler}
+	router.POST("/echo/guardian-helper", EchoIntentHandler)
 
 	fmt.Println(fmt.Sprintf("Start listening on port(%s)", port))
 
@@ -170,8 +170,8 @@ func dumpRequest(ctx *gin.Context) {
 
 // Alexa skill related functions
 
-func EchoIntentHandler(w http.ResponseWriter, r *http.Request) {
-	_ = alexa.GetEchoRequest(r)
+func EchoIntentHandler(ctx *gin.Context) {
+	_ = alexa.GetEchoRequest(ctx.Request)
 
 	response := alexa.NewEchoResponse()
 	response = response.OutputSpeech("You currently have 12 spinmetal on your Warlock.").Card("It happened", "You did it!")
@@ -181,5 +181,6 @@ func EchoIntentHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Write(bytes)
+	//w.Write(bytes)
+	ctx.String(http.StatusOK, "application/json", bytes)
 }
