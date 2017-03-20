@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	alexa "github.com/mikeflynn/go-alexa/skillserver"
 )
 
 type BungieAPIResponse struct {
@@ -59,6 +60,9 @@ func main() {
 	router.GET("auth-code-response", AuthCodeResponseHandler)
 
 	router.POST("tokens", TokenHandler)
+
+	app := alexa.EchoApplication{AppID: "", Handler: EchoIntentHandler}
+	http.HandleFunc("/echo/guardian-helper", app.Handler)
 
 	fmt.Println(fmt.Sprintf("Start listening on port(%s)", port))
 
@@ -162,4 +166,20 @@ func dumpRequest(ctx *gin.Context) {
 	}
 
 	fmt.Println(string(data))
+}
+
+// Alexa skill related functions
+
+func EchoIntentHandler(w http.ResponseWriter, r *http.Request) {
+	_ = alexa.GetEchoRequest(r)
+
+	response := alexa.NewEchoResponse()
+	response = response.OutputSpeech("You currently have 12 spinmetal on your Warlock.").Card("It happened", "You did it!")
+	bytes, err := response.String()
+	if err != nil {
+		fmt.Println("Failed to convert EchoResponse to a byte slice.")
+		return
+	}
+
+	w.Write(bytes)
 }

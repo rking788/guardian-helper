@@ -1,13 +1,19 @@
 {
 	"comment": "",
+	"heroku": {
+		"goVersion": "go1.8"
+	},
 	"ignore": "test",
-    "heroku": {
-        "goVersion": "go1.8"
-    },
 	"package": [
 		{
 			"path": "bitbucket.org/rking788/guardian-helper",
 			"revision": ""
+		},
+		{
+			"checksumSHA1": "DD8FkpJIXDppCrkvWXz5YqasY9I=",
+			"path": "github.com/codegangsta/negroni",
+			"revision": "c0db5feaa33826cd5117930c8f4ee5c0f565eec6",
+			"revisionTime": "2017-02-26T00:53:33Z"
 		},
 		{
 			"checksumSHA1": "RsNwOto8G8aXIiRrlFn4dtU9q/g=",
@@ -34,6 +40,18 @@
 			"revisionTime": "2017-03-07T00:15:33Z"
 		},
 		{
+			"checksumSHA1": "g/V4qrXjUGG9B+e3hB+4NAYJ5Gs=",
+			"path": "github.com/gorilla/context",
+			"revision": "08b5f424b9271eedf6f9f0ce86cb9396ed337a42",
+			"revisionTime": "2016-08-17T18:46:32Z"
+		},
+		{
+			"checksumSHA1": "zmCk+lgIeiOf0Ng9aFP9aFy8ksE=",
+			"path": "github.com/gorilla/mux",
+			"revision": "599cba5e7b6137d46ddf58fb1765f5d928e69604",
+			"revisionTime": "2017-02-28T22:43:54Z"
+		},
+		{
 			"checksumSHA1": "b0T0Hzd+zYk+OCDTFMps+jwa/nY=",
 			"path": "github.com/manucorporat/sse",
 			"revision": "ee05b128a739a0fb76c7ebd3ae4810c1de808d6d",
@@ -44,6 +62,12 @@
 			"path": "github.com/mattn/go-isatty",
 			"revision": "57fdcb988a5c543893cc61bce354a6e24ab70022",
 			"revisionTime": "2017-03-07T16:30:44Z"
+		},
+		{
+			"checksumSHA1": "VralCnILGXLVjwgAju67/KA9UVY=",
+			"path": "github.com/mikeflynn/go-alexa/skillserver",
+			"revision": "ca9bde7854923bcf74f5e1591d6d1a596492bb6f",
+			"revisionTime": "2016-12-29T19:34:29Z"
 		},
 		{
 			"checksumSHA1": "Y+HGqEkYM15ir+J93MEaHdyFy0c=",
