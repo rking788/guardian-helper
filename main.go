@@ -14,6 +14,8 @@ import (
 	alexa "github.com/mikeflynn/go-alexa/skillserver"
 )
 
+// BungieAPIResponse is a data type that represents the JSON response
+// from a Bungie API call.
 type BungieAPIResponse struct {
 	Response        *Response   `json:"Response"`
 	ErrorCode       int         `json:"ErrorCode"`
@@ -23,12 +25,15 @@ type BungieAPIResponse struct {
 	MessageData     interface{} `json:"MessageData"`
 }
 
+// Response represents the response portion of a Bungie API response.
 type Response struct {
 	AccessToken  *Token `json:"accessToken"`
 	RefreshToken *Token `json:"refreshToken"`
 	Scope        int    `json:"scope"`
 }
 
+// Token is a data type representing the fields of an access token,
+// could be the access_token itself or a refresh token.
 type Token struct {
 	Value   string `json:"Value"`
 	ReadyIn int    `json:"readyin"`
@@ -62,13 +67,19 @@ func main() {
 	router.POST("tokens", TokenHandler)
 
 	//app := alexa.EchoApplication{AppID: "", Handler: EchoIntentHandler}
-	router.POST("/echo/guardian-helper", EchoIntentHandler)
+	echo := router.Group("/echo")
+	{
+		echo.POST("/guardian-helper", EchoIntentHandler)
+	}
 
 	fmt.Println(fmt.Sprintf("Start listening on port(%s)", port))
 
 	router.Run(":" + port)
 }
 
+// AuthGetHandler is a handler function that is responsible for redirecting
+// the Alexa app to the Bungie authorization page for the app during
+// account linking.
 func AuthGetHandler(ctx *gin.Context) {
 	dumpRequest(ctx)
 
@@ -78,6 +89,9 @@ func AuthGetHandler(ctx *gin.Context) {
 	ctx.Redirect(http.StatusFound, "https://www.bungie.net/en/Application/Authorize/2579")
 }
 
+// AuthCodeResponseHandler is a handler that will receive a callback from the
+// Bungie authorization page with the Authorization code to be sent back to the
+// Alexa redirect URI specified in a previous request.
 func AuthCodeResponseHandler(ctx *gin.Context) {
 	dumpRequest(ctx)
 	uri := fmt.Sprintf("%s?state=%s&code=%s", redirectURI, state, ctx.Query("code"))
@@ -86,6 +100,9 @@ func AuthCodeResponseHandler(ctx *gin.Context) {
 	ctx.Redirect(http.StatusFound, uri)
 }
 
+// TokenHandler is a handler responsible for receiving a call from the Alexa Platform
+// and requesting a new access token from the Bungie API. This will generate
+// a new access token and can also be used to refresh a previous token.
 func TokenHandler(ctx *gin.Context) {
 	dumpRequest(ctx)
 
@@ -99,9 +116,9 @@ func getAccessToken(ctx *gin.Context) {
 	uri := "https://www.bungie.net/Platform/App/GetAccessTokensFromCode/"
 	apiKey := readAPIKey(ctx)
 
-	bodyJson := make(map[string]string)
-	bodyJson["code"] = ctx.Request.Form.Get("code")
-	body, err := json.Marshal(bodyJson)
+	bodyJSON := make(map[string]string)
+	bodyJSON["code"] = ctx.Request.Form.Get("code")
+	body, err := json.Marshal(bodyJSON)
 	if err != nil {
 		fmt.Println("Failed to marshal JSON: ", err.Error())
 		return
@@ -170,6 +187,8 @@ func dumpRequest(ctx *gin.Context) {
 
 // Alexa skill related functions
 
+// EchoIntentHandler is a handler method that is responsible for receiving the
+// call from a Alexa command and returning the correct speech or cards.
 func EchoIntentHandler(ctx *gin.Context) {
 	//_ = alexa.GetEchoRequest(ctx.Request)
 
