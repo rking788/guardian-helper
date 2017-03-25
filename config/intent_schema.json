@@ -1,0 +1,13 @@
+{
+  "intents": [
+    {
+      "intent": "CountItem",
+      "slots": [
+        {
+            "name": "Item",
+            "type": "ITEM_TYPE"
+        }  
+      ]
+    }
+  ]
+}

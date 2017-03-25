@@ -1,0 +1,6 @@
+CountItem tell me how many {Item} I have
+CountItem tell me how much {Item} I have
+CountItem see how many {Item} I have
+CountItem see how much {Item} I have
+CountItem check how many {Item} I have
+CountItem check how much {Item} I have

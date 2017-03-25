@@ -108,16 +108,67 @@ func TokenHandler(ctx *gin.Context) {
 
 	ctx.Request.ParseForm()
 
-	getAccessToken(ctx)
+	if ctx.Request.Form.Get("refresh_token") != "" {
+		fmt.Println("Getting tokens from refresh token...")
+		getAccessTokenWithRefreshToken(ctx, ctx.Request.Form.Get("refresh_token"))
+	} else {
+		fmt.Println("Getting tokens from auth code...")
+		getAccessTokenWithAuthCode(ctx, ctx.Request.Form.Get("code"))
+	}
 }
 
-func getAccessToken(ctx *gin.Context) {
+func getAccessTokenWithRefreshToken(ctx *gin.Context, refreshToken string) {
+
+	uri := "https://www.bungie.net/Platform/App/GetAccessTokensFromRefreshToken/"
+	apiKey := readAPIKey(ctx)
+
+	bodyJSON := make(map[string]string)
+	bodyJSON["refreshToken"] = refreshToken
+	body, err := json.Marshal(bodyJSON)
+	if err != nil {
+		fmt.Println("Failed to marshal JSON: ", err.Error())
+		return
+	}
+
+	client := http.Client{}
+	req, err := http.NewRequest("POST", uri, strings.NewReader(string(body)))
+	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("X-API-Key", apiKey)
+
+	tokenResponse, err := client.Do(req)
+	tokenBytes, err := ioutil.ReadAll(tokenResponse.Body)
+	if err != nil {
+		fmt.Println("Failed to read the token response from Bungie!: ", err.Error())
+		return
+	}
+
+	tokenJSON := BungieAPIResponse{}
+	json.Unmarshal(tokenBytes, &tokenJSON)
+
+	fmt.Printf("Unmarshal-ed response from Bungie API: %+v\n", tokenJSON)
+
+	if tokenJSON.ErrorStatus != "Success" || tokenJSON.Message != "Ok" {
+		fmt.Println("Got an invalid response back")
+		return
+	}
+
+	response := make(map[string]interface{})
+	response["access_token"] = tokenJSON.Response.AccessToken.Value
+	response["expires_in"] = tokenJSON.Response.AccessToken.Expires
+	response["refresh_token"] = tokenJSON.Response.RefreshToken.Value
+
+	fmt.Printf("Sending response to Alexa refreshing tokens: %+v\n", response)
+
+	ctx.JSON(http.StatusOK, response)
+}
+
+func getAccessTokenWithAuthCode(ctx *gin.Context, code string) {
 
 	uri := "https://www.bungie.net/Platform/App/GetAccessTokensFromCode/"
 	apiKey := readAPIKey(ctx)
 
 	bodyJSON := make(map[string]string)
-	bodyJSON["code"] = ctx.Request.Form.Get("code")
+	bodyJSON["code"] = code
 	body, err := json.Marshal(bodyJSON)
 	if err != nil {
 		fmt.Println("Failed to marshal JSON: ", err.Error())
@@ -190,7 +241,20 @@ func dumpRequest(ctx *gin.Context) {
 // EchoIntentHandler is a handler method that is responsible for receiving the
 // call from a Alexa command and returning the correct speech or cards.
 func EchoIntentHandler(ctx *gin.Context) {
-	//_ = alexa.GetEchoRequest(ctx.Request)
+	requestBytes, err := ioutil.ReadAll(ctx.Request.Body)
+	if err != nil {
+		fmt.Println("Error reading echo request!: ", err.Error())
+		ctx.AbortWithError(http.StatusInternalServerError, err)
+		return
+	}
+
+	echoRequest := alexa.EchoRequest{}
+	json.Unmarshal(requestBytes, &echoRequest)
+	fmt.Printf("Got echo request: %+v\n", echoRequest)
+
+	if echoRequest.GetIntentName() == "CountItem" {
+
+	}
 
 	response := alexa.NewEchoResponse()
 	response = response.OutputSpeech("You currently have 12 spinmetal on your Warlock.").Card("It happened", "You did it!")
