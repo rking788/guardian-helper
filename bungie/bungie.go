@@ -13,10 +13,11 @@ import (
 
 // Constant API endpoints
 const (
-	AppAuthURL                = "https://www.bungie.net/en/Application/Authorize/2579"
-	TokensFromRefreshTokenURL = "https://www.bungie.net/Platform/App/GetAccessTokensFromRefreshToken/"
-	TokensFromAuthCodeURL     = "https://www.bungie.net/Platform/App/GetAccessTokensFromCode/"
-	ItemsEndpointFormat       = "http://www.bungie.net/Platform/Destiny/%d/Account/%s/Items"
+	AppAuthURL                        = "https://www.bungie.net/en/Application/Authorize/2579"
+	TokensFromRefreshTokenURL         = "https://www.bungie.net/Platform/App/GetAccessTokensFromRefreshToken/"
+	TokensFromAuthCodeURL             = "https://www.bungie.net/Platform/App/GetAccessTokensFromCode/"
+	MembershipIDFromDisplayNameFormat = "http://www.bungie.net/Platform/Destiny/SearchDestinyPlayer/%d/%s/"
+	ItemsEndpointFormat               = "http://www.bungie.net/Platform/Destiny/%d/Account/%s/Items"
 )
 
 // Hash values for different class types 'classHash' JSON key
@@ -257,11 +258,65 @@ func AuthenticationHeaders(apiKey, accessToken string) map[string]string {
 
 // TODO: Add a method to retrieve the membership ID from a dispaly name
 
+// MembershipIDLookUpResponse represents the response to a Destiny membership ID lookup call
+// SAMPLE:
+/*
+{
+  "Response": [
+    {
+      "iconPath": "/img/theme/destiny/icons/icon_xbl.png",
+      "membershipType": 1,
+      "membershipId": "4611686018437694484",
+      "displayName": "rpk788"
+    }
+  ],
+  "ErrorCode": 1,
+  "ThrottleSeconds": 0,
+  "ErrorStatus": "Success",
+  "Message": "Ok",
+  "MessageData": {}
+}
+*/
+type MembershipIDLookUpResponse struct {
+	Response        []*MembershipData `json:"Response"`
+	ErrorCode       int               `json:"ErrorCode"`
+	ThrottleSeconds int               `json:"ThrottleSeconds"`
+	ErrorStatus     string            `json:"ErrorStatus"`
+	Message         string            `json:"Message"`
+	MessageData     interface{}       `json:"MessageData"`
+}
+
+// MembershipData represents the Response portion of the membership ID lookup
+type MembershipData struct {
+	MembershipID string `json:"membershipId"`
+}
+
 // MembershipIDFromDisplayName is responsible for retrieving the Destiny
 // membership ID from the Bungie API given a specific display name
 // from either Xbox or PSN
 func MembershipIDFromDisplayName(displayName string) string {
-	return "4611686018437694484"
+
+	endpoint := fmt.Sprintf(MembershipIDFromDisplayNameFormat, XBOX, displayName)
+	client := http.Client{}
+	request, _ := http.NewRequest("GET", endpoint, nil)
+	request.Header.Add("X-Api-Key", os.Getenv("BUNGIE_API_KEY"))
+
+	membershipResponse, err := client.Do(request)
+	if err != nil {
+		fmt.Println("Failed to request Destiny membership ID from Bungie!")
+		return ""
+	}
+
+	membershipBytes, err := ioutil.ReadAll(membershipResponse.Body)
+	if err != nil {
+		fmt.Println("Couldn't read the response body from the Bungie API!")
+		return ""
+	}
+
+	jsonResponse := MembershipIDLookUpResponse{}
+	json.Unmarshal(membershipBytes, &jsonResponse)
+
+	return jsonResponse.Response[0].MembershipID
 }
 
 // CountItem will count the number of the specified item and return an EchoResponse
@@ -275,6 +330,8 @@ func CountItem(itemName, accessToken string) (*alexa.EchoResponse, error) {
 		return response, nil
 	}
 
+	// TODO: Make this membership type dynamic
+	// TODO: Figure out the best way to get the display name here
 	endpoint := fmt.Sprintf(ItemsEndpointFormat, XBOX, MembershipIDFromDisplayName("rpk788"))
 
 	client := http.Client{}
@@ -288,7 +345,7 @@ func CountItem(itemName, accessToken string) (*alexa.EchoResponse, error) {
 	itemsResponse, err := client.Do(req)
 	itemsBytes, err := ioutil.ReadAll(itemsResponse.Body)
 	if err != nil {
-		fmt.Println("Failed to read the token response from Bungie!: ", err.Error())
+		fmt.Println("Failed to read the Items response from Bungie!: ", err.Error())
 		return nil, err
 	}
 

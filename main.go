@@ -241,9 +241,6 @@ func dumpRequest(ctx *gin.Context) {
 // call from a Alexa command and returning the correct speech or cards.
 func EchoIntentHandler(ctx *gin.Context) {
 
-	dumpRequest(ctx)
-	ctx.Request.ParseForm()
-
 	requestBytes, err := ioutil.ReadAll(ctx.Request.Body)
 	if err != nil {
 		fmt.Println("Error reading echo request!: ", err.Error())
