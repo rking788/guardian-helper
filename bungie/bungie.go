@@ -298,7 +298,7 @@ func CountItem(itemName, accessToken string) (*alexa.EchoResponse, error) {
 	fmt.Printf("Unmarshal-ed response from Bungie API: %+v\n", itemsJSON)
 
 	matchingItems := itemsJSON.Response.Data.findItemsMatchingHash(itemNameToHashMap[itemName])
-	fmt.Printf("Found %d items in characters inventory.", len(matchingItems))
+	fmt.Printf("Found %d items in characters inventory.\n", len(matchingItems))
 	fmt.Printf("Matching Items: %+v\n", matchingItems)
 
 	response = response.OutputSpeech("You currently have 12 spinmetal on your Warlock.")
@@ -307,7 +307,7 @@ func CountItem(itemName, accessToken string) (*alexa.EchoResponse, error) {
 }
 
 func (data *ItemsData) findItemsMatchingHash(itemHash uint) []*Item {
-	result := make([]*Item, 4)
+	result := make([]*Item, 0)
 
 	for _, item := range data.Items {
 		if item.ItemHash == itemHash {
