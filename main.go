@@ -10,6 +10,7 @@ import (
 	"os"
 	"strings"
 
+	"bitbucket.org/rking788/guardian-helper/bungie"
 	"github.com/gin-gonic/gin"
 	alexa "github.com/mikeflynn/go-alexa/skillserver"
 )
@@ -86,7 +87,7 @@ func AuthGetHandler(ctx *gin.Context) {
 	redirectURI = ctx.Query("redirect_uri")
 	state = ctx.Query("state")
 
-	ctx.Redirect(http.StatusFound, "https://www.bungie.net/en/Application/Authorize/2579")
+	ctx.Redirect(http.StatusFound, bungie.AppAuthURL)
 }
 
 // AuthCodeResponseHandler is a handler that will receive a callback from the
@@ -119,7 +120,6 @@ func TokenHandler(ctx *gin.Context) {
 
 func getAccessTokenWithRefreshToken(ctx *gin.Context, refreshToken string) {
 
-	uri := "https://www.bungie.net/Platform/App/GetAccessTokensFromRefreshToken/"
 	apiKey := readAPIKey(ctx)
 
 	bodyJSON := make(map[string]string)
@@ -131,7 +131,7 @@ func getAccessTokenWithRefreshToken(ctx *gin.Context, refreshToken string) {
 	}
 
 	client := http.Client{}
-	req, err := http.NewRequest("POST", uri, strings.NewReader(string(body)))
+	req, err := http.NewRequest("POST", bungie.TokensFromRefreshTokenURL, strings.NewReader(string(body)))
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("X-API-Key", apiKey)
 
@@ -164,7 +164,6 @@ func getAccessTokenWithRefreshToken(ctx *gin.Context, refreshToken string) {
 
 func getAccessTokenWithAuthCode(ctx *gin.Context, code string) {
 
-	uri := "https://www.bungie.net/Platform/App/GetAccessTokensFromCode/"
 	apiKey := readAPIKey(ctx)
 
 	bodyJSON := make(map[string]string)
@@ -176,7 +175,7 @@ func getAccessTokenWithAuthCode(ctx *gin.Context, code string) {
 	}
 
 	client := http.Client{}
-	req, err := http.NewRequest("POST", uri, strings.NewReader(string(body)))
+	req, err := http.NewRequest("POST", bungie.TokensFromAuthCodeURL, strings.NewReader(string(body)))
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("X-API-Key", apiKey)
 
@@ -252,12 +251,14 @@ func EchoIntentHandler(ctx *gin.Context) {
 	json.Unmarshal(requestBytes, &echoRequest)
 	fmt.Printf("Got echo request: %+v\n", echoRequest)
 
+	var response *alexa.EchoResponse
 	if echoRequest.GetIntentName() == "CountItem" {
-
+		response, err = bungie.CountItem("Spinmetal", readAPIKey(ctx), echoRequest.Session.User.AccessToken)
+	} else {
+		response = alexa.NewEchoResponse()
+		response.OutputSpeech("Sorry Guardian, I did not understand your request.")
 	}
 
-	response := alexa.NewEchoResponse()
-	response = response.OutputSpeech("You currently have 12 spinmetal on your Warlock.").Card("It happened", "You did it!")
 	bytes, err := response.String()
 	if err != nil {
 		fmt.Println("Failed to convert EchoResponse to a byte slice.")
