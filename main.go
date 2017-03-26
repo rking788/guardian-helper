@@ -257,7 +257,8 @@ func EchoIntentHandler(ctx *gin.Context) {
 
 	var response *alexa.EchoResponse
 	if echoRequest.GetIntentName() == "CountItem" {
-		response, err = bungie.CountItem("Spinmetal", readAPIKey(ctx), echoRequest.Session.User.AccessToken)
+		item, _ := echoRequest.GetSlotValue("Item")
+		response, err = bungie.CountItem(item, echoRequest.Session.User.AccessToken)
 	} else {
 		response = alexa.NewEchoResponse()
 		response.OutputSpeech("Sorry Guardian, I did not understand your request.")

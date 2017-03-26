@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"time"
 
 	alexa "github.com/mikeflynn/go-alexa/skillserver"
@@ -265,7 +266,7 @@ func MembershipIDFromDisplayName(displayName string) string {
 
 // CountItem will count the number of the specified item and return an EchoResponse
 // that can be serialized and sent back to the Alexa skill.
-func CountItem(itemName, apiKey, accessToken string) (*alexa.EchoResponse, error) {
+func CountItem(itemName, accessToken string) (*alexa.EchoResponse, error) {
 
 	response := alexa.NewEchoResponse()
 
@@ -280,7 +281,7 @@ func CountItem(itemName, apiKey, accessToken string) (*alexa.EchoResponse, error
 
 	req, err := http.NewRequest("GET", endpoint, nil)
 	req.Header.Add("Content-Type", "application/json")
-	for key, val := range AuthenticationHeaders(apiKey, accessToken) {
+	for key, val := range AuthenticationHeaders(os.Getenv("BUNGIE_API_KEY"), accessToken) {
 		req.Header.Add(key, val)
 	}
 
