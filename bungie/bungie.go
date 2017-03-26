@@ -118,7 +118,7 @@ type Item struct {
 	//  IsGridComplete `json:"isGridComplete"`
 	TransferStatus uint `json:"transferStatus"`
 	State          uint `json:"state"`
-	CharacterIndex uint `json:"characterIndex"`
+	CharacterIndex int  `json:"characterIndex"`
 	BucketHash     uint `json:"bucketHash"`
 }
 
@@ -297,11 +297,21 @@ func CountItem(itemName, accessToken string) (*alexa.EchoResponse, error) {
 
 	fmt.Printf("Unmarshal-ed response from Bungie API: %+v\n", itemsJSON)
 
-	matchingItems := itemsJSON.Response.Data.findItemsMatchingHash(itemNameToHashMap[itemName])
-	fmt.Printf("Found %d items in characters inventory.\n", len(matchingItems))
+	itemsData := itemsJSON.Response.Data
+	matchingItems := itemsData.findItemsMatchingHash(itemNameToHashMap[itemName])
+	fmt.Printf("Found %d items entries in characters inventory.\n", len(matchingItems))
 	fmt.Printf("Matching Items: %+v\n", matchingItems)
 
-	response = response.OutputSpeech("You currently have 12 spinmetal on your Warlock.")
+	if len(matchingItems) == 0 {
+		response.OutputSpeech(fmt.Sprintf("You don't have any %s on any of your characters.", itemName))
+		return response, nil
+	}
+
+	outputString := ""
+	for _, item := range matchingItems {
+		outputString += fmt.Sprintf("Your %s has %d %s. ", itemsData.characterClassNameAtIndex(item.CharacterIndex), item.Quantity, itemName)
+	}
+	response = response.OutputSpeech(outputString)
 
 	return response, nil
 }
