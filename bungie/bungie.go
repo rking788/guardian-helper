@@ -262,6 +262,8 @@ func MembershipIDFromDisplayName(displayName string) string {
 // that can be serialized and sent back to the Alexa skill.
 func CountItem(itemName, accessToken string) (*alexa.EchoResponse, error) {
 
+	TestGetCurrentAccount(accessToken)
+
 	response := alexa.NewEchoResponse()
 	// Convert it to all lowercase
 	itemName = strings.ToLower(itemName)
@@ -315,6 +317,26 @@ func CountItem(itemName, accessToken string) (*alexa.EchoResponse, error) {
 	response = response.OutputSpeech(outputString)
 
 	return response, nil
+}
+
+func TestGetCurrentAccount(accessToken string) {
+
+	client := http.Client{}
+
+	req, err := http.NewRequest("GET", GetCurrentAccountEndpoint, nil)
+	req.Header.Add("Content-Type", "application/json")
+	for key, val := range AuthenticationHeaders(os.Getenv("BUNGIE_API_KEY"), accessToken) {
+		req.Header.Add(key, val)
+	}
+
+	itemsResponse, err := client.Do(req)
+	itemsBytes, err := ioutil.ReadAll(itemsResponse.Body)
+	if err != nil {
+		fmt.Println("Failed to read the Items response from Bungie!: ", err.Error())
+		return
+	}
+
+	fmt.Println("Found response to get current account: ", string(itemsBytes))
 }
 
 func (data *ItemsData) findItemsMatchingHash(itemHash uint) []*Item {

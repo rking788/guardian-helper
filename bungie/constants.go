@@ -5,6 +5,7 @@ const (
 	AppAuthURL                        = "https://www.bungie.net/en/Application/Authorize/2579"
 	TokensFromRefreshTokenURL         = "https://www.bungie.net/Platform/App/GetAccessTokensFromRefreshToken/"
 	TokensFromAuthCodeURL             = "https://www.bungie.net/Platform/App/GetAccessTokensFromCode/"
+	GetCurrentAccountEndpoint         = "https://www.bungie.net/Platform/App/GetCurrentBungieAccount/"
 	MembershipIDFromDisplayNameFormat = "http://www.bungie.net/Platform/Destiny/SearchDestinyPlayer/%d/%s/"
 	ItemsEndpointFormat               = "http://www.bungie.net/Platform/Destiny/%d/Account/%s/Items"
 )
@@ -64,4 +65,5 @@ var commonAlexaTranslations = map[string]string{
 	"strange coins": "strange coin",
 	"exotic shards": "exotic shard",
 	"worm spore":    "wormspore",
+	"3 of coins":    "three of coins",
 }
