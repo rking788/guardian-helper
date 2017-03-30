@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"bitbucket.org/rking788/guardian-helper/db"
@@ -262,6 +263,8 @@ func MembershipIDFromDisplayName(displayName string) string {
 func CountItem(itemName, accessToken string) (*alexa.EchoResponse, error) {
 
 	response := alexa.NewEchoResponse()
+	// Convert it to all lowercase
+	itemName = strings.ToLower(itemName)
 	if translation, ok := commonAlexaTranslations[itemName]; ok {
 		itemName = translation
 	}
