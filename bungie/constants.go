@@ -62,4 +62,6 @@ var commonAlexaTranslations = map[string]string{
 	"spin metal":    "spinmetal",
 	"passage coins": "passage coin",
 	"strange coins": "strange coin",
+	"exotic shards": "exotic shard",
+	"worm spore":    "wormspore",
 }

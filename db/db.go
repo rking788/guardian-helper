@@ -48,11 +48,21 @@ func GetItemHashFromName(itemName string) (uint, error) {
 		return 0, err
 	}
 
-	var hash uint
-	db.Table("items").
+	rows, err := db.Table("items").
 		Select("item_hash").
 		Where("item_name = ? AND non_transferrable = ?", itemName, false).
-		First(&hash)
+		Rows()
+
+	if err != nil {
+		fmt.Println("Failed to get item hash for name: ", itemName)
+		return 0, errors.New("Item lookup failed")
+	}
+
+	var hash uint
+	if rows.Next() {
+		rows.Scan(&hash)
+		fmt.Printf("Found hash for item %s: %d\n", itemName, hash)
+	}
 
 	if hash == 0 {
 		fmt.Println("Didn't find any transferrable items with that name: ", itemName)
