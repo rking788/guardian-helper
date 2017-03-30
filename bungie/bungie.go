@@ -271,7 +271,8 @@ func CountItem(itemName, accessToken string) (*alexa.EchoResponse, error) {
 
 	hash, err := db.GetItemHashFromName(itemName)
 	if err != nil {
-		response.OutputSpeech(fmt.Sprintf("Sorry, I could not find any items named %s in your inventory.", itemName))
+		outputStr := fmt.Sprintf("Sorry, I could not find any items named %s in your inventory.", itemName)
+		response.OutputSpeech(outputStr)
 		return response, nil
 	}
 
@@ -302,7 +303,8 @@ func CountItem(itemName, accessToken string) (*alexa.EchoResponse, error) {
 	fmt.Printf("Found %d items entries in characters inventory.\n", len(matchingItems))
 
 	if len(matchingItems) == 0 {
-		response.OutputSpeech(fmt.Sprintf("You don't have any %s on any of your characters.", itemName))
+		outputStr := fmt.Sprintf("You don't have any %s on any of your characters.", itemName)
+		response.OutputSpeech(outputStr)
 		return response, nil
 	}
 
