@@ -5,7 +5,7 @@ const (
 	AppAuthURL                        = "https://www.bungie.net/en/Application/Authorize/2579"
 	TokensFromRefreshTokenURL         = "https://www.bungie.net/Platform/App/GetAccessTokensFromRefreshToken/"
 	TokensFromAuthCodeURL             = "https://www.bungie.net/Platform/App/GetAccessTokensFromCode/"
-	GetCurrentAccountEndpoint         = "https://www.bungie.net/Platform/App/GetCurrentBungieAccount/"
+	GetCurrentAccountEndpoint         = "https://www.bungie.net/Platform/User/GetCurrentBungieAccount/"
 	MembershipIDFromDisplayNameFormat = "http://www.bungie.net/Platform/Destiny/SearchDestinyPlayer/%d/%s/"
 	ItemsEndpointFormat               = "http://www.bungie.net/Platform/Destiny/%d/Account/%s/Items"
 )
