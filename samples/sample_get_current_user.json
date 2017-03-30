@@ -1,0 +1,239 @@
+{
+   "Response" : {
+      "clans" : [],
+      "destinyAccountErrors" : [],
+      "bungieNetUser" : {
+         "profilePicture" : 70659,
+         "about" : "",
+         "isDeleted" : false,
+         "locale" : "en",
+         "displayName" : "rpk788",
+         "userTitle" : 0,
+         "firstAccess" : "2014-12-03T16:36:31.891Z",
+         "userTitleDisplay" : "Newbie",
+         "profileThemeName" : "septagon",
+         "localeInheritDefault" : false,
+         "context" : {
+            "isFollowing" : false,
+            "ignoreStatus" : {
+               "isIgnored" : false,
+               "ignoreFlags" : 0
+            }
+         },
+         "successMessageFlags" : "0",
+         "lastUpdate" : "2017-03-10T21:56:52.38Z",
+         "statusDate" : "0001-01-01T00:00:00Z",
+         "statusText" : "",
+         "profilePicturePath" : "/img/profile/avatars/cc29.jpg",
+         "membershipId" : "8867970",
+         "uniqueName" : "8867970",
+         "showGroupMessaging" : true,
+         "showActivity" : true,
+         "profileTheme" : 0
+      },
+      "destinyAccounts" : [
+         {
+            "userInfo" : {
+               "membershipType" : 1,
+               "displayName" : "rpk788",
+               "iconPath" : "/common/destiny_content/icons/895eeb8c8dfbac4eb00d13ed276d5285.jpg",
+               "membershipId" : "4611686018437694484"
+            },
+            "lastPlayed" : "2017-03-30T00:30:15Z",
+            "characters" : [
+               {
+                  "race" : {
+                     "redacted" : false,
+                     "index" : 0,
+                     "raceName" : "Exo",
+                     "raceType" : 2,
+                     "raceDescription" : "Self-aware machines built for a long-forgotten war.",
+                     "raceNameMale" : "Exo Male",
+                     "hash" : 898834093,
+                     "raceHash" : 898834093,
+                     "raceNameFemale" : "Exo Female"
+                  },
+                  "genderType" : 0,
+                  "genderHash" : 3111576190,
+                  "membershipType" : 1,
+                  "classHash" : 2271682572,
+                  "isPrestigeLevel" : false,
+                  "gender" : {
+                     "index" : 0,
+                     "redacted" : false,
+                     "genderName" : "Male",
+                     "genderDescription" : "",
+                     "hash" : 3111576190,
+                     "genderHash" : 3111576190,
+                     "genderType" : 0
+                  },
+                  "powerLevel" : 389,
+                  "characterId" : "2305843009230596456",
+                  "raceHash" : 898834093,
+                  "currentActivityHash" : 0,
+                  "percentToNextLevel" : 0,
+                  "emblemPath" : "/common/destiny_content/icons/895eeb8c8dfbac4eb00d13ed276d5285.jpg",
+                  "membershipId" : "4611686018437694484",
+                  "characterClass" : {
+                     "classType" : 2,
+                     "classNameMale" : "Warlock",
+                     "hash" : 2271682572,
+                     "mentorVendorIdentifier" : "VENDOR_WARLOCK_MENTOR",
+                     "classHash" : 2271682572,
+                     "redacted" : false,
+                     "index" : 0,
+                     "classIdentifier" : "CLASS_WARLOCK",
+                     "classNameFemale" : "Warlock",
+                     "className" : "Warlock"
+                  },
+                  "levelProgression" : {
+                     "dailyProgress" : 0,
+                     "nextLevelAt" : 0,
+                     "step" : 0,
+                     "progressToNextLevel" : 0,
+                     "weeklyProgress" : 0,
+                     "progressionHash" : 1716568313,
+                     "level" : 40,
+                     "currentProgress" : 346000
+                  },
+                  "classType" : 2,
+                  "dateLastPlayed" : "2017-03-30T00:30:15Z",
+                  "level" : 40,
+                  "backgroundPath" : "/common/destiny_content/icons/c243825d64b01125531889ca8074f637.jpg",
+                  "emblemHash" : 2809337283
+               },
+               {
+                  "gender" : {
+                     "genderName" : "Male",
+                     "index" : 0,
+                     "redacted" : false,
+                     "hash" : 3111576190,
+                     "genderDescription" : "",
+                     "genderType" : 0,
+                     "genderHash" : 3111576190
+                  },
+                  "isPrestigeLevel" : false,
+                  "classHash" : 671679327,
+                  "membershipType" : 1,
+                  "genderHash" : 3111576190,
+                  "race" : {
+                     "index" : 0,
+                     "redacted" : false,
+                     "raceName" : "Human",
+                     "raceType" : 0,
+                     "raceNameFemale" : "Human Female",
+                     "raceHash" : 3887404748,
+                     "hash" : 3887404748,
+                     "raceNameMale" : "Human Male",
+                     "raceDescription" : "Human"
+                  },
+                  "genderType" : 0,
+                  "raceHash" : 3887404748,
+                  "characterId" : "2305843009289784451",
+                  "powerLevel" : 384,
+                  "levelProgression" : {
+                     "progressToNextLevel" : 0,
+                     "progressionHash" : 1716568313,
+                     "level" : 40,
+                     "weeklyProgress" : 0,
+                     "currentProgress" : 346000,
+                     "nextLevelAt" : 0,
+                     "dailyProgress" : 0,
+                     "step" : 0
+                  },
+                  "characterClass" : {
+                     "hash" : 671679327,
+                     "classType" : 1,
+                     "classNameMale" : "Hunter",
+                     "classIdentifier" : "CLASS_HUNTER",
+                     "classNameFemale" : "Hunter",
+                     "className" : "Hunter",
+                     "classHash" : 671679327,
+                     "redacted" : false,
+                     "index" : 0,
+                     "mentorVendorIdentifier" : "VENDOR_HUNTER_MENTOR"
+                  },
+                  "membershipId" : "4611686018437694484",
+                  "emblemPath" : "/common/destiny_content/icons/64dab1c375a8071766cdc8bd946fb12a.jpg",
+                  "percentToNextLevel" : 0,
+                  "currentActivityHash" : 0,
+                  "emblemHash" : 2840347248,
+                  "backgroundPath" : "/common/destiny_content/icons/b08566467b270adcabebb30fe67fdad3.jpg",
+                  "level" : 40,
+                  "classType" : 1,
+                  "dateLastPlayed" : "2017-03-24T21:56:17Z"
+               },
+               {
+                  "raceHash" : 2803282938,
+                  "characterId" : "2305843009259285087",
+                  "powerLevel" : 379,
+                  "classHash" : 3655393761,
+                  "membershipType" : 1,
+                  "isPrestigeLevel" : false,
+                  "gender" : {
+                     "index" : 0,
+                     "redacted" : false,
+                     "genderName" : "Male",
+                     "genderDescription" : "",
+                     "hash" : 3111576190,
+                     "genderHash" : 3111576190,
+                     "genderType" : 0
+                  },
+                  "genderHash" : 3111576190,
+                  "race" : {
+                     "raceNameFemale" : "Awoken Female",
+                     "hash" : 2803282938,
+                     "raceHash" : 2803282938,
+                     "raceNameMale" : "Awoken Male",
+                     "raceDescription" : "The Awoken survived the Collapse in deep space. But they were forever changed.",
+                     "redacted" : false,
+                     "raceName" : "Awoken",
+                     "index" : 0,
+                     "raceType" : 1
+                  },
+                  "genderType" : 0,
+                  "emblemHash" : 1459499349,
+                  "backgroundPath" : "/common/destiny_content/icons/2638fec23d31280a869f5c88b00aa378.jpg",
+                  "classType" : 0,
+                  "level" : 40,
+                  "dateLastPlayed" : "2017-03-24T02:31:47Z",
+                  "levelProgression" : {
+                     "currentProgress" : 346000,
+                     "progressionHash" : 1716568313,
+                     "level" : 40,
+                     "weeklyProgress" : 0,
+                     "progressToNextLevel" : 0,
+                     "step" : 0,
+                     "nextLevelAt" : 0,
+                     "dailyProgress" : 0
+                  },
+                  "emblemPath" : "/common/destiny_content/icons/5261fa14018f71b0b54d39019bbf1474.jpg",
+                  "percentToNextLevel" : 0,
+                  "currentActivityHash" : 0,
+                  "characterClass" : {
+                     "hash" : 3655393761,
+                     "classType" : 0,
+                     "classNameMale" : "Titan",
+                     "redacted" : false,
+                     "classHash" : 3655393761,
+                     "index" : 0,
+                     "classNameFemale" : "Titan",
+                     "classIdentifier" : "CLASS_TITAN",
+                     "className" : "Titan",
+                     "mentorVendorIdentifier" : "VENDOR_TITAN_MENTOR"
+                  },
+                  "membershipId" : "4611686018437694484"
+               }
+            ],
+            "versions" : 15,
+            "grimoireScore" : 3865
+         }
+      ],
+      "relatedGroups" : {}
+   },
+   "Message" : "Ok",
+   "MessageData" : {},
+   "ErrorStatus" : "Success",
+   "ErrorCode" : 1,
+   "ThrottleSeconds" : 0
+}

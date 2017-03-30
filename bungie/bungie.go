@@ -13,14 +13,20 @@ import (
 	alexa "github.com/mikeflynn/go-alexa/skillserver"
 )
 
+// BaseResponse represents the data returned as part of all of the Bungie API
+// requests.
+type BaseResponse struct {
+	ErrorCode       int         `json:"ErrorCode"`
+	ThrottleSeconds int         `json:"ThrottleSeconds"`
+	ErrorStatus     string      `json:"ErrorStatus"`
+	Message         string      `json:"Message"`
+	MessageData     interface{} `json:"MessageData"`
+}
+
 // ItemsEndpointResponse represents the response from a call to the /items endpoint
 type ItemsEndpointResponse struct {
-	Response        *ItemsResponse `json:"Response"`
-	ErrorCode       int            `json:"ErrorCode"`
-	ThrottleSeconds int            `json:"ThrottleSeconds"`
-	ErrorStatus     string         `json:"ErrorStatus"`
-	Message         string         `json:"Message"`
-	MessageData     interface{}    `json:"MessageData"`
+	Response *ItemsResponse `json:"Response"`
+	Base     *BaseResponse
 }
 
 // ItemsResponse is the inner response from the /Items endpoint
@@ -186,6 +192,21 @@ type CharacterBase struct {
 	ClassType              uint      `json:"ClassType"`
 }
 
+// GetAccountResponse is the response from a get current account API call
+// this information needs to be used in all of the character/user specific endpoints.
+type GetAccountResponse struct {
+	Response *struct {
+		DestinyAccounts []*struct {
+			UserInfo *struct {
+				MembershipType uint   `json:"membershipType"`
+				DisplayName    string `json:"displayName"`
+				MembershipID   string `json:"membershipId"`
+			} `json:"userInfo"`
+		} `json:"destinyAccounts"`
+	} `json:"Response"`
+	Base *BaseResponse
+}
+
 // AuthenticationHeaders will generate a map with the required headers to make
 // an authenticated HTTP call to the Bungie API.
 func AuthenticationHeaders(apiKey, accessToken string) map[string]string {
@@ -262,9 +283,15 @@ func MembershipIDFromDisplayName(displayName string) string {
 // that can be serialized and sent back to the Alexa skill.
 func CountItem(itemName, accessToken string) (*alexa.EchoResponse, error) {
 
-	TestGetCurrentAccount(accessToken)
-
 	response := alexa.NewEchoResponse()
+
+	currentAccount := GetCurrentAccount(accessToken)
+	if currentAccount == nil {
+		speech := fmt.Sprintf("Sorry Guardian, currently unable to get your account information.")
+		response.OutputSpeech(speech)
+		return response, nil
+	}
+
 	// Convert it to all lowercase
 	itemName = strings.ToLower(itemName)
 	if translation, ok := commonAlexaTranslations[itemName]; ok {
@@ -278,9 +305,9 @@ func CountItem(itemName, accessToken string) (*alexa.EchoResponse, error) {
 		return response, nil
 	}
 
-	// TODO: Make this membership type dynamic
-	// TODO: Figure out the best way to get the display name here
-	endpoint := fmt.Sprintf(ItemsEndpointFormat, XBOX, MembershipIDFromDisplayName("rpk788"))
+	// TODO: Figure out how to support multiple accounts, meaning PSN and XBOx
+	userInfo := currentAccount.Response.DestinyAccounts[0].UserInfo
+	endpoint := fmt.Sprintf(ItemsEndpointFormat, userInfo.MembershipType, userInfo.MembershipID)
 
 	client := http.Client{}
 
@@ -319,7 +346,9 @@ func CountItem(itemName, accessToken string) (*alexa.EchoResponse, error) {
 	return response, nil
 }
 
-func TestGetCurrentAccount(accessToken string) {
+// GetCurrentAccount will request the user info for the current user
+// based on the OAuth token provided as part of the request.
+func GetCurrentAccount(accessToken string) *GetAccountResponse {
 
 	client := http.Client{}
 
@@ -333,10 +362,15 @@ func TestGetCurrentAccount(accessToken string) {
 	itemsBytes, err := ioutil.ReadAll(itemsResponse.Body)
 	if err != nil {
 		fmt.Println("Failed to read the Items response from Bungie!: ", err.Error())
-		return
+		return nil
 	}
 
-	fmt.Println("Found response to get current account: ", string(itemsBytes))
+	accountResponse := GetAccountResponse{}
+	json.Unmarshal(itemsBytes, &accountResponse)
+
+	fmt.Println("Found response to get current account: ", accountResponse.Response.DestinyAccounts[0].UserInfo)
+
+	return &accountResponse
 }
 
 func (data *ItemsData) findItemsMatchingHash(itemHash uint) []*Item {
