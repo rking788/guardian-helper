@@ -250,7 +250,6 @@ func EchoIntentHandler(ctx *gin.Context) {
 
 	echoRequest := alexa.EchoRequest{}
 	json.Unmarshal(requestBytes, &echoRequest)
-	fmt.Printf("Got echo request: %+v\n", echoRequest)
 
 	var response *alexa.EchoResponse
 	if echoRequest.GetIntentName() == "CountItem" {

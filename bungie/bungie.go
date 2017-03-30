@@ -8,71 +8,9 @@ import (
 	"os"
 	"time"
 
+	"bitbucket.org/rking788/guardian-helper/db"
 	alexa "github.com/mikeflynn/go-alexa/skillserver"
 )
-
-// Constant API endpoints
-const (
-	AppAuthURL                        = "https://www.bungie.net/en/Application/Authorize/2579"
-	TokensFromRefreshTokenURL         = "https://www.bungie.net/Platform/App/GetAccessTokensFromRefreshToken/"
-	TokensFromAuthCodeURL             = "https://www.bungie.net/Platform/App/GetAccessTokensFromCode/"
-	MembershipIDFromDisplayNameFormat = "http://www.bungie.net/Platform/Destiny/SearchDestinyPlayer/%d/%s/"
-	ItemsEndpointFormat               = "http://www.bungie.net/Platform/Destiny/%d/Account/%s/Items"
-)
-
-// Hash values for different class types 'classHash' JSON key
-const (
-	WARLOCK = 2271682572
-	TITAN   = 3655393761
-	HUNTER  = 671679327
-)
-
-var classHashToName = map[uint]string{
-	WARLOCK: "Warlock",
-	TITAN:   "Titan",
-	HUNTER:  "Hunter",
-}
-
-// Class Enum value passed in some of the Destiny API responses
-const (
-	TitanEnum        = 0
-	HunterEnum       = 1
-	WarlockEnum      = 2
-	UnknownClassEnum = 3
-)
-
-// Hash values for Race types 'raceHash' JSON key
-const (
-	AWOKEN = 2803282938
-	HUMAN  = 3887404748
-	EXO    = 898834093
-)
-
-// Hash values for Gender 'genderHash' JSON key
-const (
-	MALE   = 3111576190
-	FEMALE = 2204441813
-)
-
-// Gender Enum values used in some of the Bungie API responses
-const (
-	MaleEnum          = 0
-	FemaleEnum        = 1
-	UnknownGenderEnum = 2
-)
-
-// Membership type constant values
-const (
-	XBOX = 1
-	PSN  = 2
-)
-
-var itemNameToHashMap = map[string]uint{
-	"spin metal":       2882093969,
-	"relic iron":       3242866270,
-	"spirit bloom":     2254123540,
-	"helium filaments": 1797491610,
-}
 
 // ItemsEndpointResponse represents the response from a call to the /items endpoint
 type ItemsEndpointResponse struct {
@@ -324,8 +262,12 @@ func MembershipIDFromDisplayName(displayName string) string {
 func CountItem(itemName, accessToken string) (*alexa.EchoResponse, error) {
 
 	response := alexa.NewEchoResponse()
+	if translation, ok := commonAlexaTranslations[itemName]; ok {
+		itemName = translation
+	}
 
-	if _, ok := itemNameToHashMap[itemName]; !ok {
+	hash, err := db.GetItemHashFromName(itemName)
+	if err != nil {
 		response.OutputSpeech(fmt.Sprintf("Sorry, I could not find any items named %s in your inventory.", itemName))
 		return response, nil
 	}
@@ -352,12 +294,9 @@ func CountItem(itemName, accessToken string) (*alexa.EchoResponse, error) {
 	itemsJSON := ItemsEndpointResponse{}
 	json.Unmarshal(itemsBytes, &itemsJSON)
 
-	fmt.Printf("Unmarshal-ed response from Bungie API: %+v\n", itemsJSON)
-
 	itemsData := itemsJSON.Response.Data
-	matchingItems := itemsData.findItemsMatchingHash(itemNameToHashMap[itemName])
+	matchingItems := itemsData.findItemsMatchingHash(hash)
 	fmt.Printf("Found %d items entries in characters inventory.\n", len(matchingItems))
-	fmt.Printf("Matching Items: %+v\n", matchingItems)
 
 	if len(matchingItems) == 0 {
 		response.OutputSpeech(fmt.Sprintf("You don't have any %s on any of your characters.", itemName))
