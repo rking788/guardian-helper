@@ -261,6 +261,7 @@ func EchoIntentHandler(ctx *gin.Context) {
 		item, _ := echoRequest.GetSlotValue("Item")
 		destinationClass, _ := echoRequest.GetSlotValue("Destination")
 		output := fmt.Sprintf("Transferring %s of your %s items to your %s", count, item, destinationClass)
+		fmt.Println(output)
 		response = alexa.NewEchoResponse()
 		response.OutputSpeech(output)
 	} else {
