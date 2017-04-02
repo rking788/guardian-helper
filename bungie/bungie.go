@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
-	"strings"
 	"time"
 
 	"bitbucket.org/rking788/guardian-helper/db"
@@ -42,19 +41,6 @@ type ItemsData struct {
 
 // Item will represent a single inventory item returned by the /Items character
 // endpoint.
-// SAMPLE:
-/*
-"itemHash": 2547904967,
-"itemId": "6917529113043779096",
-"quantity": 1,
-"damageType": 0,
-"damageTypeHash": 0,
-"isGridComplete": false,
-"transferStatus": 2,
-"state": 0,
-"characterIndex": 0,
-"bucketHash": 1801258597
-*/
 type Item struct {
 	ItemHash       uint   `json:"itemHash"`
 	ItemID         string `json:"itemId"`
@@ -69,18 +55,6 @@ type Item struct {
 }
 
 // Character will represent a single character entry returned by the /Items endpoint
-// SAMPLE:
-/*
-"characterBase" : ...,
-"levelProgression": ...,
-"emblemPath": "/common/destiny_content/icons/fb6b9de16fac065c07507569646c5986.jpg",
-"backgroundPath": "/common/destiny_content/icons/7e5820dc78c64ce37ee6fc22910ba92a.jpg",
-"emblemHash": 2765416092,
-"characterLevel": 40,
-"baseCharacterLevel": 40,
-"isPrestigeLevel": false,
-"percentToNextLevel": 0
-*/
 type Character struct {
 	CharacterBase *CharacterBase
 	// NOTE: The rest is probably unused at least for the transferring items command
@@ -88,95 +62,6 @@ type Character struct {
 
 // CharacterBase represents the base data for a character entry
 // returned by the /Items endpoint.
-// SAMPLE:
-/*
-"membershipId": "4611686018437694484",
-"membershipType": 1,
-"characterId": "2305843009230596456",
-"dateLastPlayed": "2017-03-25T03:44:27Z",
-"minutesPlayedThisSession": "114",
-"minutesPlayedTotal": "22906",
-"powerLevel": 386,
-"raceHash": 898834093,
-"genderHash": 3111576190,
-"classHash": 2271682572,
-"currentActivityHash": 0,
-"lastCompletedStoryHash": 0,
-"stats": {
-  "STAT_DEFENSE": {
-    "statHash": 3897883278,
-    "value": 0,
-    "maximumValue": 0
-  },
-  "STAT_INTELLECT": {
-    "statHash": 144602215,
-    "value": 274,
-    "maximumValue": 0
-  },
-  "STAT_DISCIPLINE": {
-    "statHash": 1735777505,
-    "value": 292,
-    "maximumValue": 0
-  },
-  "STAT_STRENGTH": {
-    "statHash": 4244567218,
-    "value": 92,
-    "maximumValue": 0
-  },
-  "STAT_LIGHT": {
-    "statHash": 2391494160,
-    "value": 386,
-    "maximumValue": 0
-  },
-  "STAT_ARMOR": {
-    "statHash": 392767087,
-    "value": 7,
-    "maximumValue": 0
-  },
-  "STAT_AGILITY": {
-    "statHash": 2996146975,
-    "value": 3,
-    "maximumValue": 0
-  },
-  "STAT_RECOVERY": {
-    "statHash": 1943323491,
-    "value": 6,
-    "maximumValue": 0
-  },
-  "STAT_OPTICS": {
-    "statHash": 3555269338,
-    "value": 42,
-    "maximumValue": 0
-  }
-},
-"customization": {
-  "personality": 2166136261,
-  "face": 4017475050,
-  "skinColor": 743423469,
-  "lipColor": 156633759,
-  "eyeColor": 4187018146,
-  "hairColor": 1992135330,
-  "featureColor": 2166136261,
-  "decalColor": 2194048904,
-  "wearHelmet": false,
-  "hairIndex": 5,
-  "featureIndex": 0,
-  "decalIndex": 1
-},
-"grimoireScore": 3855,
-"peerView": {
-  "equipment": [
-    {
-      "itemHash": 1256644900,
-      "dyes": []
-    },
-...
-  ]
-},
-"genderType": 0,
-"classType": 2,
-"buildStatGroupHash": 2257899156
-*/
 type CharacterBase struct {
 	MembershipID           string    `json:"membershipId"`
 	MembershipType         uint      `json:"membershipType"`
@@ -216,27 +101,7 @@ func AuthenticationHeaders(apiKey, accessToken string) map[string]string {
 	}
 }
 
-// TODO: Add a method to retrieve the membership ID from a dispaly name
-
 // MembershipIDLookUpResponse represents the response to a Destiny membership ID lookup call
-// SAMPLE:
-/*
-{
-  "Response": [
-    {
-      "iconPath": "/img/theme/destiny/icons/icon_xbl.png",
-      "membershipType": 1,
-      "membershipId": "4611686018437694484",
-      "displayName": "rpk788"
-    }
-  ],
-  "ErrorCode": 1,
-  "ThrottleSeconds": 0,
-  "ErrorStatus": "Success",
-  "Message": "Ok",
-  "MessageData": {}
-}
-*/
 type MembershipIDLookUpResponse struct {
 	Response        []*MembershipData `json:"Response"`
 	ErrorCode       int               `json:"ErrorCode"`
@@ -254,6 +119,7 @@ type MembershipData struct {
 // MembershipIDFromDisplayName is responsible for retrieving the Destiny
 // membership ID from the Bungie API given a specific display name
 // from either Xbox or PSN
+// TODO: This may no longer be needed as the GetCurrentAccount endpoint should fix all this.
 func MembershipIDFromDisplayName(displayName string) string {
 
 	endpoint := fmt.Sprintf(MembershipIDFromDisplayNameFormat, XBOX, displayName)
@@ -292,40 +158,26 @@ func CountItem(itemName, accessToken string) (*alexa.EchoResponse, error) {
 		return response, nil
 	}
 
-	// Convert it to all lowercase
-	itemName = strings.ToLower(itemName)
+	// Check common misinterpretations from Alexa
 	if translation, ok := commonAlexaTranslations[itemName]; ok {
 		itemName = translation
 	}
 
 	hash, err := db.GetItemHashFromName(itemName)
 	if err != nil {
-		outputStr := fmt.Sprintf("Sorry, I could not find any items named %s in your inventory.", itemName)
+		outputStr := fmt.Sprintf("Sorry Guardian, I could not find any items named %s in your inventory.", itemName)
 		response.OutputSpeech(outputStr)
 		return response, nil
 	}
 
 	// TODO: Figure out how to support multiple accounts, meaning PSN and XBOx
 	userInfo := currentAccount.Response.DestinyAccounts[0].UserInfo
-	endpoint := fmt.Sprintf(ItemsEndpointFormat, userInfo.MembershipType, userInfo.MembershipID)
 
-	client := http.Client{}
-
-	req, err := http.NewRequest("GET", endpoint, nil)
-	req.Header.Add("Content-Type", "application/json")
-	for key, val := range AuthenticationHeaders(os.Getenv("BUNGIE_API_KEY"), accessToken) {
-		req.Header.Add(key, val)
-	}
-
-	itemsResponse, err := client.Do(req)
-	itemsBytes, err := ioutil.ReadAll(itemsResponse.Body)
+	itemsJSON, err := GetUserItems(userInfo.MembershipType, userInfo.MembershipID, accessToken)
 	if err != nil {
 		fmt.Println("Failed to read the Items response from Bungie!: ", err.Error())
 		return nil, err
 	}
-
-	itemsJSON := ItemsEndpointResponse{}
-	json.Unmarshal(itemsBytes, &itemsJSON)
 
 	itemsData := itemsJSON.Response.Data
 	matchingItems := itemsData.findItemsMatchingHash(hash)
@@ -371,6 +223,32 @@ func GetCurrentAccount(accessToken string) *GetAccountResponse {
 	fmt.Println("Found response to get current account: ", accountResponse.Response.DestinyAccounts[0].UserInfo)
 
 	return &accountResponse
+}
+
+// GetUserItems will make a request to the bungie API and retrieve all of the
+// items for a specific Destiny membership ID. This includes all of their characters
+// as well as the vault. The vault with have a character index of -1.
+func GetUserItems(membershipType uint, membershipID, accessToken string) (*ItemsEndpointResponse, error) {
+	endpoint := fmt.Sprintf(ItemsEndpointFormat, membershipType, membershipID)
+
+	client := http.Client{}
+
+	req, _ := http.NewRequest("GET", endpoint, nil)
+	req.Header.Add("Content-Type", "application/json")
+	for key, val := range AuthenticationHeaders(os.Getenv("BUNGIE_API_KEY"), accessToken) {
+		req.Header.Add(key, val)
+	}
+
+	itemsResponse, _ := client.Do(req)
+	itemsBytes, err := ioutil.ReadAll(itemsResponse.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	itemsJSON := &ItemsEndpointResponse{}
+	json.Unmarshal(itemsBytes, itemsJSON)
+
+	return itemsJSON, nil
 }
 
 func (data *ItemsData) findItemsMatchingHash(itemHash uint) []*Item {

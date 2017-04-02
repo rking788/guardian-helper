@@ -254,7 +254,15 @@ func EchoIntentHandler(ctx *gin.Context) {
 	var response *alexa.EchoResponse
 	if echoRequest.GetIntentName() == "CountItem" {
 		item, _ := echoRequest.GetSlotValue("Item")
-		response, err = bungie.CountItem(item, echoRequest.Session.User.AccessToken)
+		lowerItem := strings.ToLower(item)
+		response, err = bungie.CountItem(lowerItem, echoRequest.Session.User.AccessToken)
+	} else if echoRequest.GetIntentName() == "TransferItem" {
+		count, _ := echoRequest.GetSlotValue("Count")
+		item, _ := echoRequest.GetSlotValue("Item")
+		destinationClass, _ := echoRequest.GetSlotValue("Destination")
+		output := fmt.Sprintf("Transferring %s of your %s items to your %s", count, item, destinationClass)
+		response = alexa.NewEchoResponse()
+		response.OutputSpeech(output)
 	} else {
 		response = alexa.NewEchoResponse()
 		response.OutputSpeech("Sorry Guardian, I did not understand your request.")

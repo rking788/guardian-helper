@@ -6,8 +6,25 @@
         {
             "name": "Item",
             "type": "ITEM_TYPE"
-        }  
+        }
       ]
+    },
+    {
+        "intent": "TransferItem",
+        "slots": [
+            {
+              "name": "Count",
+              "type": "AMAZON.NUMBER"
+            },
+            {
+                "name": "Item",
+                "type": "ITEM_TYPE"
+            },
+            {
+                "name": "Destination",
+                "type": "CLASS_TYPE"
+            }
+        ]
     }
   ]
 }
