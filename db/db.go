@@ -14,24 +14,11 @@ import (
 // environment variables or some other method.
 func GetDBConnection() (*gorm.DB, error) {
 
-	// Retrieve required environment variables describing DB connection details
-	host := os.Getenv("GUARDIAN_HELPER_DB_HOST")
-	name := os.Getenv("GUARDIAN_HELPER_DB_NAME")
-	user := os.Getenv("GUARDIAN_HELPER_DB_USER")
-	pass := os.Getenv("GUARDIAN_HELPER_DB_PASS")
-	sslMode := os.Getenv("GUARDIAN_HELPER_DB_SSL_MODE")
-	if sslMode == "" {
-		sslMode = "disable"
-	}
-
-	if host == "" || name == "" || user == "" || pass == "" {
-		return nil, errors.New("Missing one or more DB environment variables")
-	}
-
 	//connStr := fmt.Sprintf("host=%s dbname=%s user=%s password=%s sslmode=%s",
 	//	host, name, user, pass, sslMode)
 	db, err := gorm.Open("postgres", os.Getenv("DATABASE_URL"))
 	if err != nil {
+		fmt.Println("DB errror: ", err.Error())
 		return nil, err
 	}
 

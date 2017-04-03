@@ -275,6 +275,5 @@ func EchoIntentHandler(ctx *gin.Context) {
 		return
 	}
 
-	//w.Write(bytes)
 	ctx.String(http.StatusOK, string(bytes))
 }

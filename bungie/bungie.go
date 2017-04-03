@@ -95,15 +95,6 @@ type GetAccountResponse struct {
 	Base *BaseResponse
 }
 
-// AuthenticationHeaders will generate a map with the required headers to make
-// an authenticated HTTP call to the Bungie API.
-func AuthenticationHeaders(apiKey, accessToken string) map[string]string {
-	return map[string]string{
-		"X-Api-Key":     apiKey,
-		"Authorization": "Bearer " + accessToken,
-	}
-}
-
 // MembershipIDLookUpResponse represents the response to a Destiny membership ID lookup call
 type MembershipIDLookUpResponse struct {
 	Response        []*MembershipData `json:"Response"`
@@ -119,6 +110,31 @@ type MembershipData struct {
 	MembershipID string `json:"membershipId"`
 }
 
+// Client is a type that contains all information needed to make requests to the
+// Bungie API.
+type Client struct {
+	*http.Client
+	AccessToken string
+	ApiToken    string
+}
+
+func NewClient(accessToken, apiToken string) *Client {
+	return &Client{
+		Client:      http.DefaultClient,
+		AccessToken: accessToken,
+		ApiToken:    apiToken,
+	}
+}
+
+// AuthenticationHeaders will generate a map with the required headers to make
+// an authenticated HTTP call to the Bungie API.
+func (c *Client) AuthenticationHeaders() map[string]string {
+	return map[string]string{
+		"X-Api-Key":     c.ApiToken,
+		"Authorization": "Bearer " + c.AccessToken,
+	}
+}
+
 // MembershipIDFromDisplayName is responsible for retrieving the Destiny
 // membership ID from the Bungie API given a specific display name
 // from either Xbox or PSN
@@ -126,9 +142,9 @@ type MembershipData struct {
 func MembershipIDFromDisplayName(displayName string) string {
 
 	endpoint := fmt.Sprintf(MembershipIDFromDisplayNameFormat, XBOX, displayName)
-	client := http.Client{}
+	client := NewClient("", os.Getenv("BUNGIE_API_KEY"))
 	request, _ := http.NewRequest("GET", endpoint, nil)
-	request.Header.Add("X-Api-Key", os.Getenv("BUNGIE_API_KEY"))
+	request.Header.Add("X-Api-Key", client.ApiToken)
 
 	membershipResponse, err := client.Do(request)
 	if err != nil {
@@ -154,10 +170,11 @@ func CountItem(itemName, accessToken string) (*alexa.EchoResponse, error) {
 
 	response := alexa.NewEchoResponse()
 
+	client := NewClient(accessToken, os.Getenv("BUNGIE_API_KEY"))
 	accountChan := make(chan *GetAccountResponse)
 
 	go func() {
-		currentAccount := GetCurrentAccount(accessToken)
+		currentAccount := GetCurrentAccount(client)
 		accountChan <- currentAccount
 	}()
 
@@ -183,7 +200,7 @@ func CountItem(itemName, accessToken string) (*alexa.EchoResponse, error) {
 	// TODO: Figure out how to support multiple accounts, meaning PSN and XBOX
 	userInfo := currentAccount.Response.DestinyAccounts[0].UserInfo
 
-	itemsJSON, err := GetUserItems(userInfo.MembershipType, userInfo.MembershipID, accessToken)
+	itemsJSON, err := GetUserItems(userInfo.MembershipType, userInfo.MembershipID, client)
 	if err != nil {
 		fmt.Println("Failed to read the Items response from Bungie!: ", err.Error())
 		return nil, err
@@ -211,6 +228,7 @@ func CountItem(itemName, accessToken string) (*alexa.EchoResponse, error) {
 func TransferItem(itemName, accessToken, sourceClass, destinationClass, countStr string) (*alexa.EchoResponse, error) {
 	response := alexa.NewEchoResponse()
 
+	client := NewClient(accessToken, os.Getenv("BUNGIE_API_KEY"))
 	count := -1
 	if countStr != "" {
 		if tempCount, ok := strconv.Atoi(countStr); ok != nil {
@@ -237,7 +255,7 @@ func TransferItem(itemName, accessToken, sourceClass, destinationClass, countStr
 	// 	return response, nil
 	// }
 
-	currentAccount := GetCurrentAccount(accessToken)
+	currentAccount := GetCurrentAccount(client)
 	if currentAccount == nil {
 		speech := fmt.Sprintf("Sorry Guardian, currently unable to get your account information.")
 		response.OutputSpeech(speech)
@@ -259,7 +277,7 @@ func TransferItem(itemName, accessToken, sourceClass, destinationClass, countStr
 	// TODO: Figure out how to support multiple accounts, meaning PSN and XBOx
 	userInfo := currentAccount.Response.DestinyAccounts[0].UserInfo
 
-	itemsJSON, err := GetUserItems(userInfo.MembershipType, userInfo.MembershipID, accessToken)
+	itemsJSON, err := GetUserItems(userInfo.MembershipType, userInfo.MembershipID, client)
 	if err != nil {
 		fmt.Println("Failed to read the Items response from Bungie!: ", err.Error())
 		return nil, err
@@ -284,16 +302,15 @@ func TransferItem(itemName, accessToken, sourceClass, destinationClass, countStr
 		return response, nil
 	}
 
-	transferItem(hash, matchingItems, allChars, destCharacter, userInfo.MembershipType, count, accessToken)
+	transferItem(hash, matchingItems, allChars, destCharacter, userInfo.MembershipType, count, client)
 
 	response.OutputSpeech("All set Guardian.")
 
 	return response, nil
 }
 
-func transferItem(itemHash uint, itemSet []*Item, fullCharList []*Character, destCharacter *Character, membershipType uint, count int, accessToken string) {
+func transferItem(itemHash uint, itemSet []*Item, fullCharList []*Character, destCharacter *Character, membershipType uint, count int, client *Client) {
 
-	client := http.Client{}
 	var totalCount uint
 
 	for _, item := range itemSet {
@@ -330,7 +347,7 @@ func transferItem(itemHash uint, itemSet []*Item, fullCharList []*Character, des
 
 		req, _ := http.NewRequest("POST", TransferItemEndpointURL, strings.NewReader(string(jsonBody)))
 		req.Header.Add("Content-Type", "application/json")
-		for key, val := range AuthenticationHeaders(os.Getenv("BUNGIE_API_KEY"), accessToken) {
+		for key, val := range client.AuthenticationHeaders() {
 			req.Header.Add(key, val)
 		}
 
@@ -363,7 +380,7 @@ func transferItem(itemHash uint, itemSet []*Item, fullCharList []*Character, des
 
 	req, _ := http.NewRequest("POST", TransferItemEndpointURL, strings.NewReader(string(jsonBody)))
 	req.Header.Add("Content-Type", "application/json")
-	for key, val := range AuthenticationHeaders(os.Getenv("BUNGIE_API_KEY"), accessToken) {
+	for key, val := range client.AuthenticationHeaders() {
 		req.Header.Add(key, val)
 	}
 
@@ -395,13 +412,11 @@ func findDestinationCharacter(characters []*Character, class string) (*Character
 
 // GetCurrentAccount will request the user info for the current user
 // based on the OAuth token provided as part of the request.
-func GetCurrentAccount(accessToken string) *GetAccountResponse {
-
-	client := http.Client{}
+func GetCurrentAccount(client *Client) *GetAccountResponse {
 
 	req, err := http.NewRequest("GET", GetCurrentAccountEndpoint, nil)
 	req.Header.Add("Content-Type", "application/json")
-	for key, val := range AuthenticationHeaders(os.Getenv("BUNGIE_API_KEY"), accessToken) {
+	for key, val := range client.AuthenticationHeaders() {
 		req.Header.Add(key, val)
 	}
 
@@ -421,18 +436,16 @@ func GetCurrentAccount(accessToken string) *GetAccountResponse {
 // GetUserItems will make a request to the bungie API and retrieve all of the
 // items for a specific Destiny membership ID. This includes all of their characters
 // as well as the vault. The vault with have a character index of -1.
-func GetUserItems(membershipType uint, membershipID, accessToken string) (*ItemsEndpointResponse, error) {
+func GetUserItems(membershipType uint, membershipID string, client *Client) (*ItemsEndpointResponse, error) {
 	endpoint := fmt.Sprintf(ItemsEndpointFormat, membershipType, membershipID)
-
-	client := http.Client{}
 
 	req, _ := http.NewRequest("GET", endpoint, nil)
 	req.Header.Add("Content-Type", "application/json")
-	for key, val := range AuthenticationHeaders(os.Getenv("BUNGIE_API_KEY"), accessToken) {
+	for key, val := range client.AuthenticationHeaders() {
 		req.Header.Add(key, val)
 	}
 
-	itemsResponse, _ := client.Do(req)
+	itemsResponse, _ := client.Client.Do(req)
 	itemsBytes, err := ioutil.ReadAll(itemsResponse.Body)
 	if err != nil {
 		return nil, err
