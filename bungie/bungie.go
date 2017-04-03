@@ -345,7 +345,7 @@ func transferItem(itemHash uint, itemSet []*Item, fullCharList []*Character, des
 	requestBody := map[string]interface{}{
 		"itemReferenceHash": itemHash,
 		"stackSize":         totalCount, // TODO: This should support transferring a subset
-		"transferToVault":   true,
+		"transferToVault":   false,
 		"itemId":            0,
 		"characterId":       destCharacter.CharacterBase.CharacterID,
 		"membershipType":    membershipType,
