@@ -263,8 +263,7 @@ func EchoIntentHandler(ctx *gin.Context) {
 		destinationClass, _ := echoRequest.GetSlotValue("Destination")
 		output := fmt.Sprintf("Transferring %s of your %s from your %s to your %s", countStr, strings.ToLower(item), strings.ToLower(sourceClass), strings.ToLower(destinationClass))
 		fmt.Println(output)
-		response = alexa.NewEchoResponse()
-		response.OutputSpeech(output)
+		response, err = bungie.TransferItem(strings.ToLower(item), echoRequest.Session.User.AccessToken, strings.ToLower(sourceClass), strings.ToLower(destinationClass), countStr)
 	} else {
 		response = alexa.NewEchoResponse()
 		response.OutputSpeech("Sorry Guardian, I did not understand your request.")
