@@ -172,13 +172,48 @@ func CountItem(itemName, accessToken string) (*alexa.EchoResponse, error) {
 	response := alexa.NewEchoResponse()
 
 	client := NewClient(accessToken, os.Getenv("BUNGIE_API_KEY"))
-	accountChan := make(chan *GetAccountResponse)
+	accountChan := make(chan struct {
+		*ItemsEndpointResponse
+		error
+	})
 
 	go func() {
 		start := time.Now()
 		currentAccount := GetCurrentAccount(client)
-		accountChan <- currentAccount
 		fmt.Println("Time to get current account: ", time.Since(start))
+
+		//currentAccount := <-accountChan
+		if currentAccount == nil {
+			speech := fmt.Sprintf("Sorry Guardian, currently unable to get your account information.")
+			response.OutputSpeech(speech)
+			accountChan <- struct {
+				*ItemsEndpointResponse
+				error
+			}{nil, errors.New("Couldn't get current account info")}
+			return
+			//return response, nil
+		}
+
+		startGetItems := time.Now()
+		// TODO: Figure out how to support multiple accounts, meaning PSN and XBOX
+		userInfo := currentAccount.Response.DestinyAccounts[0].UserInfo
+
+		itemsJSON, err := GetUserItems(userInfo.MembershipType, userInfo.MembershipID, client)
+		if err != nil {
+			fmt.Println("Failed to read the Items response from Bungie!: ", err.Error())
+			//return nil, err
+			accountChan <- struct {
+				*ItemsEndpointResponse
+				error
+			}{nil, errors.New("Failed to read current user's items")}
+			return
+		}
+		fmt.Println("Time to get user's items: ", time.Since(startGetItems))
+
+		accountChan <- struct {
+			*ItemsEndpointResponse
+			error
+		}{itemsJSON, nil}
 	}()
 
 	startHash := time.Now()
@@ -196,24 +231,11 @@ func CountItem(itemName, accessToken string) (*alexa.EchoResponse, error) {
 
 	fmt.Println("Time to get translation and hash from DB: ", time.Since(startHash))
 
-	currentAccount := <-accountChan
-	if currentAccount == nil {
-		speech := fmt.Sprintf("Sorry Guardian, currently unable to get your account information.")
-		response.OutputSpeech(speech)
+	itemsJSON, _ := <-accountChan
+	if itemsJSON.error != nil {
+		response.OutputSpeech("Sorry Guardian, there was an error reading your current account information.")
 		return response, nil
 	}
-
-	startGetItems := time.Now()
-	// TODO: Figure out how to support multiple accounts, meaning PSN and XBOX
-	userInfo := currentAccount.Response.DestinyAccounts[0].UserInfo
-
-	itemsJSON, err := GetUserItems(userInfo.MembershipType, userInfo.MembershipID, client)
-	if err != nil {
-		fmt.Println("Failed to read the Items response from Bungie!: ", err.Error())
-		return nil, err
-	}
-	fmt.Println("Time to get user's items: ", time.Since(startGetItems))
-
 	startFindItemsMatching := time.Now()
 	itemsData := itemsJSON.Response.Data
 	matchingItems := itemsData.findItemsMatchingHash(hash)
@@ -267,12 +289,11 @@ func TransferItem(itemName, accessToken, sourceClass, destinationClass, countStr
 	// 	return response, nil
 	// }
 
-	currentAccount := GetCurrentAccount(client)
-	if currentAccount == nil {
-		speech := fmt.Sprintf("Sorry Guardian, currently unable to get your account information.")
-		response.OutputSpeech(speech)
-		return response, nil
-	}
+	accountChan := make(chan *GetAccountResponse)
+	go func() {
+		currentAccount := GetCurrentAccount(client)
+		accountChan <- currentAccount
+	}()
 
 	// Check common misinterpretations from Alexa
 	if translation, ok := commonAlexaTranslations[itemName]; ok {
@@ -283,6 +304,13 @@ func TransferItem(itemName, accessToken, sourceClass, destinationClass, countStr
 	if err != nil {
 		outputStr := fmt.Sprintf("Sorry Guardian, I could not find any items named %s in your inventory.", itemName)
 		response.OutputSpeech(outputStr)
+		return response, nil
+	}
+
+	currentAccount := <-accountChan
+	if currentAccount == nil {
+		speech := fmt.Sprintf("Sorry Guardian, currently unable to get your account information.")
+		response.OutputSpeech(speech)
 		return response, nil
 	}
 
