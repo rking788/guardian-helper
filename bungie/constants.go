@@ -74,4 +74,5 @@ var commonAlexaTranslations = map[string]string{
 	"worm spore":    "wormspore",
 	"3 of coins":    "three of coins",
 	"worms for":     "wormspore",
+	"worm for":      "wormspore",
 }

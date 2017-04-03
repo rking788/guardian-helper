@@ -415,8 +415,6 @@ func GetCurrentAccount(accessToken string) *GetAccountResponse {
 	accountResponse := GetAccountResponse{}
 	json.Unmarshal(itemsBytes, &accountResponse)
 
-	fmt.Println("Found response to get current account: ", accountResponse.Response.DestinyAccounts[0].UserInfo)
-
 	return &accountResponse
 }
 

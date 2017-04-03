@@ -28,9 +28,9 @@ func GetDBConnection() (*gorm.DB, error) {
 		return nil, errors.New("Missing one or more DB environment variables")
 	}
 
-	connStr := fmt.Sprintf("host=%s dbname=%s user=%s password=%s sslmode=%s",
-		host, name, user, pass, sslMode)
-	db, err := gorm.Open("postgres", connStr)
+	//connStr := fmt.Sprintf("host=%s dbname=%s user=%s password=%s sslmode=%s",
+	//	host, name, user, pass, sslMode)
+	db, err := gorm.Open("postgres", os.Getenv("DATABASE_URL"))
 	if err != nil {
 		return nil, err
 	}
