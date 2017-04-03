@@ -154,12 +154,12 @@ func CountItem(itemName, accessToken string) (*alexa.EchoResponse, error) {
 
 	response := alexa.NewEchoResponse()
 
-	currentAccount := GetCurrentAccount(accessToken)
-	if currentAccount == nil {
-		speech := fmt.Sprintf("Sorry Guardian, currently unable to get your account information.")
-		response.OutputSpeech(speech)
-		return response, nil
-	}
+	accountChan := make(chan *GetAccountResponse)
+
+	go func() {
+		currentAccount := GetCurrentAccount(accessToken)
+		accountChan <- currentAccount
+	}()
 
 	// Check common misinterpretations from Alexa
 	if translation, ok := commonAlexaTranslations[itemName]; ok {
@@ -173,7 +173,14 @@ func CountItem(itemName, accessToken string) (*alexa.EchoResponse, error) {
 		return response, nil
 	}
 
-	// TODO: Figure out how to support multiple accounts, meaning PSN and XBOx
+	currentAccount := <-accountChan
+	if currentAccount == nil {
+		speech := fmt.Sprintf("Sorry Guardian, currently unable to get your account information.")
+		response.OutputSpeech(speech)
+		return response, nil
+	}
+
+	// TODO: Figure out how to support multiple accounts, meaning PSN and XBOX
 	userInfo := currentAccount.Response.DestinyAccounts[0].UserInfo
 
 	itemsJSON, err := GetUserItems(userInfo.MembershipType, userInfo.MembershipID, accessToken)
