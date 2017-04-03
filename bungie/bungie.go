@@ -116,14 +116,14 @@ type MembershipData struct {
 type Client struct {
 	*http.Client
 	AccessToken string
-	ApiToken    string
+	APIToken    string
 }
 
 func NewClient(accessToken, apiToken string) *Client {
 	return &Client{
 		Client:      http.DefaultClient,
 		AccessToken: accessToken,
-		ApiToken:    apiToken,
+		APIToken:    apiToken,
 	}
 }
 
@@ -131,7 +131,7 @@ func NewClient(accessToken, apiToken string) *Client {
 // an authenticated HTTP call to the Bungie API.
 func (c *Client) AuthenticationHeaders() map[string]string {
 	return map[string]string{
-		"X-Api-Key":     c.ApiToken,
+		"X-Api-Key":     c.APIToken,
 		"Authorization": "Bearer " + c.AccessToken,
 	}
 }
@@ -145,7 +145,7 @@ func MembershipIDFromDisplayName(displayName string) string {
 	endpoint := fmt.Sprintf(MembershipIDFromDisplayNameFormat, XBOX, displayName)
 	client := NewClient("", os.Getenv("BUNGIE_API_KEY"))
 	request, _ := http.NewRequest("GET", endpoint, nil)
-	request.Header.Add("X-Api-Key", client.ApiToken)
+	request.Header.Add("X-Api-Key", client.APIToken)
 
 	membershipResponse, err := client.Do(request)
 	if err != nil {
@@ -175,10 +175,13 @@ func CountItem(itemName, accessToken string) (*alexa.EchoResponse, error) {
 	accountChan := make(chan *GetAccountResponse)
 
 	go func() {
+		start := time.Now()
 		currentAccount := GetCurrentAccount(client)
 		accountChan <- currentAccount
+		fmt.Println("Time to get current account: ", time.Since(start))
 	}()
 
+	startHash := time.Now()
 	// Check common misinterpretations from Alexa
 	if translation, ok := commonAlexaTranslations[itemName]; ok {
 		itemName = translation
@@ -191,6 +194,8 @@ func CountItem(itemName, accessToken string) (*alexa.EchoResponse, error) {
 		return response, nil
 	}
 
+	fmt.Println("Time to get translation and hash from DB: ", time.Since(startHash))
+
 	currentAccount := <-accountChan
 	if currentAccount == nil {
 		speech := fmt.Sprintf("Sorry Guardian, currently unable to get your account information.")
@@ -198,6 +203,7 @@ func CountItem(itemName, accessToken string) (*alexa.EchoResponse, error) {
 		return response, nil
 	}
 
+	startGetItems := time.Now()
 	// TODO: Figure out how to support multiple accounts, meaning PSN and XBOX
 	userInfo := currentAccount.Response.DestinyAccounts[0].UserInfo
 
@@ -206,7 +212,9 @@ func CountItem(itemName, accessToken string) (*alexa.EchoResponse, error) {
 		fmt.Println("Failed to read the Items response from Bungie!: ", err.Error())
 		return nil, err
 	}
+	fmt.Println("Time to get user's items: ", time.Since(startGetItems))
 
+	startFindItemsMatching := time.Now()
 	itemsData := itemsJSON.Response.Data
 	matchingItems := itemsData.findItemsMatchingHash(hash)
 	fmt.Printf("Found %d items entries in characters inventory.\n", len(matchingItems))
@@ -216,12 +224,15 @@ func CountItem(itemName, accessToken string) (*alexa.EchoResponse, error) {
 		response.OutputSpeech(outputStr)
 		return response, nil
 	}
+	time.Since(startFindItemsMatching)
 
+	formOutput := time.Now()
 	outputString := ""
 	for _, item := range matchingItems {
 		outputString += fmt.Sprintf("Your %s has %d %s. ", itemsData.characterClassNameAtIndex(item.CharacterIndex), item.Quantity, itemName)
 	}
 	response = response.OutputSpeech(outputString)
+	fmt.Println("Time to form output: ", time.Since(formOutput))
 
 	return response, nil
 }
