@@ -257,10 +257,11 @@ func EchoIntentHandler(ctx *gin.Context) {
 		lowerItem := strings.ToLower(item)
 		response, err = bungie.CountItem(lowerItem, echoRequest.Session.User.AccessToken)
 	} else if echoRequest.GetIntentName() == "TransferItem" {
-		count, _ := echoRequest.GetSlotValue("Count")
+		countStr, _ := echoRequest.GetSlotValue("Count")
 		item, _ := echoRequest.GetSlotValue("Item")
+		sourceClass, _ := echoRequest.GetSlotValue("Source")
 		destinationClass, _ := echoRequest.GetSlotValue("Destination")
-		output := fmt.Sprintf("Transferring %s of your %s items to your %s", count, item, destinationClass)
+		output := fmt.Sprintf("Transferring %s of your %s from your %s to your %s", countStr, strings.ToLower(item), strings.ToLower(sourceClass), strings.ToLower(destinationClass))
 		fmt.Println(output)
 		response = alexa.NewEchoResponse()
 		response.OutputSpeech(output)

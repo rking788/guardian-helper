@@ -5,7 +5,10 @@ CountItem see how much {Item} I have
 CountItem check how many {Item} I have
 CountItem check how much {Item} I have
 
-TransferItem transfer all of my {Item} to my {Class}
-TransferItem transfer all {Item} to my {Class}
-TransferItem transfer my {Item} to my {Class}
-TransferItem transfer {Count} {Item} to my {Class}
+TransferItem transfer all of my {Item} to my {Destination}
+TransferItem transfer all {Item} to my {Destination}
+TransferItem transfer my {Item} to my {Destination}
+TransferItem transfer {Count} {Item} to my {Destination}
+
+TransferItem transfer my {Item} from my {Source} to my {Destination}
+TransferItem transfer {Count} {Item} from my {Source} to my {Destination}

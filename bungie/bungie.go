@@ -2,10 +2,13 @@ package bungie
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	"bitbucket.org/rking788/guardian-helper/db"
@@ -22,7 +25,7 @@ type BaseResponse struct {
 	MessageData     interface{} `json:"MessageData"`
 }
 
-// ItemsEndpointResponse represents the response from a call to the /items endpoint
+// ItemsEndpointResponse represents the response from a call to the /Items endpoint
 type ItemsEndpointResponse struct {
 	Response *ItemsResponse `json:"Response"`
 	Base     *BaseResponse
@@ -196,6 +199,155 @@ func CountItem(itemName, accessToken string) (*alexa.EchoResponse, error) {
 	response = response.OutputSpeech(outputString)
 
 	return response, nil
+}
+
+func TransferItem(itemName, accessToken, sourceClass, destinationClass, countStr string) (*alexa.EchoResponse, error) {
+	response := alexa.NewEchoResponse()
+
+	count := -1
+	if countStr != "" {
+		if tempCount, ok := strconv.Atoi(countStr); ok != nil {
+			if tempCount <= 0 {
+				output := fmt.Sprintf("Sorry Guardian, you need to specify a positive, non-zero count to be transferred, not %d", tempCount)
+				fmt.Println(output)
+				response.OutputSpeech(output)
+				return response, nil
+			}
+
+			count = tempCount
+		} else {
+			response.OutputSpeech("Sorry Guardian, I didn't understand the number you asked to be transferred. If you don't specify a quantity then all will be transferred.")
+			return response, nil
+		}
+	}
+
+	// sourceHash := classNameToHash[sourceClass]
+	// destinationHash := classNameToHash[destinationClass]
+	// if sourceHash == 0 || destHash == 0 {
+	// 	output := fmt.Sprintf("Sorry Guardian, I didn't understand the source (%s) or destination (%s) for the transfer.", sourceClass, destinationClass)
+	// 	fmt.Println(output)
+	// 	response.OutputSpeech(output)
+	// 	return response, nil
+	// }
+
+	currentAccount := GetCurrentAccount(accessToken)
+	if currentAccount == nil {
+		speech := fmt.Sprintf("Sorry Guardian, currently unable to get your account information.")
+		response.OutputSpeech(speech)
+		return response, nil
+	}
+
+	// Check common misinterpretations from Alexa
+	if translation, ok := commonAlexaTranslations[itemName]; ok {
+		itemName = translation
+	}
+
+	hash, err := db.GetItemHashFromName(itemName)
+	if err != nil {
+		outputStr := fmt.Sprintf("Sorry Guardian, I could not find any items named %s in your inventory.", itemName)
+		response.OutputSpeech(outputStr)
+		return response, nil
+	}
+
+	// TODO: Figure out how to support multiple accounts, meaning PSN and XBOx
+	userInfo := currentAccount.Response.DestinyAccounts[0].UserInfo
+
+	itemsJSON, err := GetUserItems(userInfo.MembershipType, userInfo.MembershipID, accessToken)
+	if err != nil {
+		fmt.Println("Failed to read the Items response from Bungie!: ", err.Error())
+		return nil, err
+	}
+
+	itemsData := itemsJSON.Response.Data
+	matchingItems := itemsData.findItemsMatchingHash(hash)
+	fmt.Printf("Found %d items entries in characters inventory.\n", len(matchingItems))
+
+	if len(matchingItems) == 0 {
+		outputStr := fmt.Sprintf("You don't have any %s on any of your characters.", itemName)
+		response.OutputSpeech(outputStr)
+		return response, nil
+	}
+
+	allChars := itemsJSON.Response.Data.Characters
+	destCharacter, err := findDestinationCharacter(itemsJSON.Response.Data.Characters, destinationClass)
+	if err != nil {
+		output := fmt.Sprintf("Could not find a character with the specified class: %s", destinationClass)
+		fmt.Println(output)
+		response.OutputSpeech(output)
+		return response, nil
+	}
+
+	transferItem(hash, matchingItems, allChars, destCharacter, userInfo.MembershipType, count, accessToken)
+
+	response.OutputSpeech("All set Guardian.")
+
+	return response, nil
+}
+
+func transferItem(itemHash uint, itemSet []*Item, fullCharList []*Character, destCharacter *Character, membershipType uint, count int, accessToken string) {
+
+	client := http.Client{}
+	for _, item := range itemSet {
+
+		if item.CharacterIndex == -1 && destCharacter == nil {
+			continue
+		}
+
+		var toVault bool
+		var charID string
+		if destCharacter != nil {
+			toVault = false
+			charID = destCharacter.CharacterBase.CharacterID
+		} else {
+			toVault = true
+			if item.CharacterIndex == -1 {
+				fmt.Println("ERROR: Found a -1 as a character index when we didn't expect one")
+				continue
+			}
+			charID = fullCharList[item.CharacterIndex].CharacterBase.CharacterID
+		}
+
+		requestBody := map[string]interface{}{
+			"itemReferenceHash": itemHash,
+			"stackSize":         item.Quantity, // TODO: This should support transferring a subset
+			"transferToVault":   toVault,
+			"itemId":            item.ItemID,
+			"characterId":       charID,
+		}
+
+		jsonBody, _ := json.Marshal(requestBody)
+		fmt.Printf("Sending tranfer request with body : %s", string(jsonBody))
+
+		req, _ := http.NewRequest("POST", TransferItemEndpointURL, strings.NewReader(string(jsonBody)))
+		req.Header.Add("Content-Type", "application/json")
+		for key, val := range AuthenticationHeaders(os.Getenv("BUNGIE_API_KEY"), accessToken) {
+			req.Header.Add(key, val)
+		}
+
+		resp, err := client.Do(req)
+		if err != nil {
+			continue
+		}
+
+		respBytes, _ := ioutil.ReadAll(resp.Body)
+		fmt.Printf("Response for transfer request: %s", string(respBytes))
+	}
+}
+
+func findDestinationCharacter(characters []*Character, class string) (*Character, error) {
+
+	if class == "vault" {
+		return nil, nil
+	}
+
+	destinationHash := classNameToHash[class]
+	for _, char := range characters {
+		if char.CharacterBase.ClassHash == destinationHash {
+			return char, nil
+		}
+	}
+
+	return nil, errors.New("could not find the specified destination character")
 }
 
 // GetCurrentAccount will request the user info for the current user

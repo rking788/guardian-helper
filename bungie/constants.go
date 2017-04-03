@@ -8,6 +8,7 @@ const (
 	GetCurrentAccountEndpoint         = "https://www.bungie.net/Platform/User/GetCurrentBungieAccount/"
 	MembershipIDFromDisplayNameFormat = "http://www.bungie.net/Platform/Destiny/SearchDestinyPlayer/%d/%s/"
 	ItemsEndpointFormat               = "http://www.bungie.net/Platform/Destiny/%d/Account/%s/Items"
+	TransferItemEndpointURL           = "https://www.bungie.net/Platform/Destiny/TransferItem/"
 )
 
 // Hash values for different class types 'classHash' JSON key
@@ -18,9 +19,15 @@ const (
 )
 
 var classHashToName = map[uint]string{
-	WARLOCK: "Warlock",
-	TITAN:   "Titan",
-	HUNTER:  "Hunter",
+	WARLOCK: "warlock",
+	TITAN:   "titan",
+	HUNTER:  "hunter",
+}
+
+var classNameToHash = map[string]uint{
+	"warlock": WARLOCK,
+	"titan":   TITAN,
+	"hunter":  HUNTER,
 }
 
 // Class Enum value passed in some of the Destiny API responses

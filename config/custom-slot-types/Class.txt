@@ -1,3 +1,4 @@
 warlock
 titan
 hunter
+vault
