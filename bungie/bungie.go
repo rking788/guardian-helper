@@ -318,6 +318,7 @@ func transferItem(itemHash uint, itemSet []*Item, fullCharList []*Character, des
 			"transferToVault":   toVault,
 			"itemId":            item.ItemID,
 			"characterId":       charID,
+			"membershipType":    membershipType,
 		}
 
 		jsonBody, _ := json.Marshal(requestBody)
