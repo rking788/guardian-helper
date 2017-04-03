@@ -466,14 +466,18 @@ func GetUserItems(membershipType uint, membershipID string, client *Client) (*It
 		req.Header.Add(key, val)
 	}
 
+	startRequest := time.Now()
 	itemsResponse, _ := client.Client.Do(req)
 	itemsBytes, err := ioutil.ReadAll(itemsResponse.Body)
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println("Get items request time: ", time.Since(startRequest))
 
+	startUnmarshal := time.Now()
 	itemsJSON := &ItemsEndpointResponse{}
 	json.Unmarshal(itemsBytes, itemsJSON)
+	fmt.Println("Unmarshal items JSON time: ", time.Since(startUnmarshal))
 
 	return itemsJSON, nil
 }
