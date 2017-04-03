@@ -47,6 +47,7 @@ func GetItemHashFromName(itemName string) (uint, error) {
 		fmt.Println("Error trying to get connection to DB.")
 		return 0, err
 	}
+	defer db.Close()
 
 	rows, err := db.Table("items").
 		Select("item_hash").
