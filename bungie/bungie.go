@@ -469,6 +469,7 @@ func GetUserItems(membershipType uint, membershipID string, client *Client) (*It
 	startRequest := time.Now()
 	itemsResponse, _ := client.Client.Do(req)
 	itemsBytes, err := ioutil.ReadAll(itemsResponse.Body)
+	fmt.Println("Size of items response: ", len(itemsBytes))
 	if err != nil {
 		return nil, err
 	}
