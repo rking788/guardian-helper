@@ -73,4 +73,5 @@ var commonAlexaTranslations = map[string]string{
 	"exotic shards": "exotic shard",
 	"worm spore":    "wormspore",
 	"3 of coins":    "three of coins",
+	"worms for":     "wormspore",
 }
