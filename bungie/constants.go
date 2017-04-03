@@ -67,12 +67,14 @@ const (
 // Alexa doesn't understand some of the dsetiny items or splits them into separate words
 // This will allow us to translate to the correct name before doing the lookup.
 var commonAlexaTranslations = map[string]string{
-	"spin metal":    "spinmetal",
-	"passage coins": "passage coin",
-	"strange coins": "strange coin",
-	"exotic shards": "exotic shard",
-	"worm spore":    "wormspore",
-	"3 of coins":    "three of coins",
-	"worms for":     "wormspore",
-	"worm for":      "wormspore",
+	"spin metal":     "spinmetal",
+	"passage coins":  "passage coin",
+	"strange coins":  "strange coin",
+	"exotic shards":  "exotic shard",
+	"worm spore":     "wormspore",
+	"3 of coins":     "three of coins",
+	"worms for":      "wormspore",
+	"worm for":       "wormspore",
+	"motes":          "mote of light",
+	"motes of light": "mote of light",
 }
