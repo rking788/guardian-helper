@@ -291,6 +291,9 @@ func transferItem(itemHash uint, itemSet []*Item, fullCharList []*Character, des
 
 		if item.CharacterIndex == -1 && destCharacter == nil {
 			continue
+		} else if item.CharacterIndex != -1 && fullCharList[item.CharacterIndex] == destCharacter {
+			fmt.Println("Attempting to transfer items to the same character... skipping")
+			continue
 		}
 
 		var toVault bool
@@ -307,6 +310,8 @@ func transferItem(itemHash uint, itemSet []*Item, fullCharList []*Character, des
 			charID = fullCharList[item.CharacterIndex].CharacterBase.CharacterID
 		}
 
+		fmt.Printf("Transferring item: %+v\n", item)
+
 		requestBody := map[string]interface{}{
 			"itemReferenceHash": itemHash,
 			"stackSize":         item.Quantity, // TODO: This should support transferring a subset
@@ -316,7 +321,7 @@ func transferItem(itemHash uint, itemSet []*Item, fullCharList []*Character, des
 		}
 
 		jsonBody, _ := json.Marshal(requestBody)
-		fmt.Printf("Sending tranfer request with body : %s", string(jsonBody))
+		fmt.Printf("Sending transfer request with body : %s\n", string(jsonBody))
 
 		req, _ := http.NewRequest("POST", TransferItemEndpointURL, strings.NewReader(string(jsonBody)))
 		req.Header.Add("Content-Type", "application/json")
@@ -330,7 +335,7 @@ func transferItem(itemHash uint, itemSet []*Item, fullCharList []*Character, des
 		}
 
 		respBytes, _ := ioutil.ReadAll(resp.Body)
-		fmt.Printf("Response for transfer request: %s", string(respBytes))
+		fmt.Printf("Response for transfer request: %s\n", string(respBytes))
 	}
 }
 
