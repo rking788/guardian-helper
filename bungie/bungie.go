@@ -287,6 +287,8 @@ func TransferItem(itemName, accessToken, sourceClass, destinationClass, countStr
 func transferItem(itemHash uint, itemSet []*Item, fullCharList []*Character, destCharacter *Character, membershipType uint, count int, accessToken string) {
 
 	client := http.Client{}
+	var totalCount uint
+
 	for _, item := range itemSet {
 
 		if item.CharacterIndex == -1 && destCharacter == nil {
@@ -296,30 +298,25 @@ func transferItem(itemHash uint, itemSet []*Item, fullCharList []*Character, des
 			continue
 		}
 
-		var toVault bool
-		var charID string
-		if destCharacter != nil {
-			toVault = false
-			charID = destCharacter.CharacterBase.CharacterID
-		} else {
-			toVault = true
-			if item.CharacterIndex == -1 {
-				fmt.Println("ERROR: Found a -1 as a character index when we didn't expect one")
-				continue
-			}
-			charID = fullCharList[item.CharacterIndex].CharacterBase.CharacterID
+		totalCount += item.Quantity
+
+		// If these items are already in the vault, skip it they will be transferred later
+		if item.CharacterIndex == -1 {
+			continue
 		}
 
-		fmt.Printf("Transferring item: %+v\n", item)
-
+		// These requests are all going TO the vault, the FROM the vault request
+		// will go later for all of these.
 		requestBody := map[string]interface{}{
 			"itemReferenceHash": itemHash,
 			"stackSize":         item.Quantity, // TODO: This should support transferring a subset
-			"transferToVault":   toVault,
+			"transferToVault":   true,
 			"itemId":            item.ItemID,
-			"characterId":       charID,
+			"characterId":       fullCharList[item.CharacterIndex].CharacterBase.CharacterID,
 			"membershipType":    membershipType,
 		}
+
+		fmt.Printf("Transferring item: %+v\n", item)
 
 		jsonBody, _ := json.Marshal(requestBody)
 		fmt.Printf("Sending transfer request with body : %s\n", string(jsonBody))
@@ -338,6 +335,39 @@ func transferItem(itemHash uint, itemSet []*Item, fullCharList []*Character, des
 		respBytes, _ := ioutil.ReadAll(resp.Body)
 		fmt.Printf("Response for transfer request: %s\n", string(respBytes))
 	}
+
+	// Now transfer all of these items from the vault to the destination character
+	if destCharacter == nil {
+		// If the destination is the vault... then we are done already
+		return
+	}
+
+	requestBody := map[string]interface{}{
+		"itemReferenceHash": itemHash,
+		"stackSize":         totalCount, // TODO: This should support transferring a subset
+		"transferToVault":   true,
+		"itemId":            0,
+		"characterId":       destCharacter.CharacterBase.CharacterID,
+		"membershipType":    membershipType,
+	}
+
+	jsonBody, _ := json.Marshal(requestBody)
+	fmt.Printf("Sending transfer request with body : %s\n", string(jsonBody))
+
+	req, _ := http.NewRequest("POST", TransferItemEndpointURL, strings.NewReader(string(jsonBody)))
+	req.Header.Add("Content-Type", "application/json")
+	for key, val := range AuthenticationHeaders(os.Getenv("BUNGIE_API_KEY"), accessToken) {
+		req.Header.Add(key, val)
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Println("Error sending transfer request to Bungie API!")
+		return
+	}
+
+	respBytes, _ := ioutil.ReadAll(resp.Body)
+	fmt.Printf("Response for transfer request: %s\n", string(respBytes))
 }
 
 func findDestinationCharacter(characters []*Character, class string) (*Character, error) {
