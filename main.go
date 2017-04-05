@@ -29,7 +29,6 @@ func main() {
 	}
 
 	fmt.Println(fmt.Sprintf("Start listening on port(%s)", port))
-
 	router.Run(":" + port)
 }
 
