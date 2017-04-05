@@ -10,3 +10,11 @@ func CountItem(itemName, accessToken, apiKey string) alexa.EchoResponse {
 
 	return alexa.EchoResponse{}
 }
+
+func GetPrivacyPolicyHTML() string {
+	return `
+		<h1></h1>
+		<p>
+		</p>
+	`
+}

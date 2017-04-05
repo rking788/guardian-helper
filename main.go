@@ -22,6 +22,7 @@ func main() {
 	router.Use(gin.Logger())
 
 	router.GET("/", RootHandler)
+	router.StaticFile("/privacy.html", "./alexa/privacy.html")
 
 	echo := router.Group("/echo")
 	{
