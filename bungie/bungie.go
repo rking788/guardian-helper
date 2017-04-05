@@ -177,6 +177,7 @@ func CountItem(itemName, accessToken string) (*alexa.EchoResponse, error) {
 		error
 	})
 
+	// Load current user and all items on all characters
 	go func() {
 		start := time.Now()
 		currentAccount := GetCurrentAccount(client)

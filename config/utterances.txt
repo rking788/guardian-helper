@@ -9,6 +9,5 @@ TransferItem transfer all of my {Item} to my {Destination}
 TransferItem transfer all {Item} to my {Destination}
 TransferItem transfer my {Item} to my {Destination}
 TransferItem transfer {Count} {Item} to my {Destination}
-
 TransferItem transfer my {Item} from my {Source} to my {Destination}
 TransferItem transfer {Count} {Item} from my {Source} to my {Destination}
