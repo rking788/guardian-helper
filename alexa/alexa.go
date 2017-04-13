@@ -21,9 +21,11 @@ func CountItem(echoRequest *skillserver.EchoRequest) (response *skillserver.Echo
 		return
 	}
 
+	fmt.Println("Found access token for testing: ", accessToken)
+
 	item, _ := echoRequest.GetSlotValue("Item")
 	lowerItem := strings.ToLower(item)
-	response, err := bungie.CountItem(lowerItem, echoRequest.Session.User.AccessToken)
+	response, err := bungie.CountItem(lowerItem, accessToken)
 	if err != nil {
 		fmt.Println("Error counting the number of items: ", err.Error())
 		response.OutputSpeech("Sorry Guardian, an error occurred counting that item.")
@@ -68,7 +70,7 @@ func TransferItem(request *skillserver.EchoRequest) (response *skillserver.EchoR
 	destinationClass, _ := request.GetSlotValue("Destination")
 	output := fmt.Sprintf("Transferring %d of your %s from your %s to your %s", count, strings.ToLower(item), strings.ToLower(sourceClass), strings.ToLower(destinationClass))
 	fmt.Println(output)
-	response, err := bungie.TransferItem(strings.ToLower(item), request.Session.User.AccessToken, strings.ToLower(sourceClass), strings.ToLower(destinationClass), count)
+	response, err := bungie.TransferItem(strings.ToLower(item), accessToken, strings.ToLower(sourceClass), strings.ToLower(destinationClass), count)
 	if err != nil {
 		response = &skillserver.EchoResponse{}
 		response.OutputSpeech("Sorry Guardian, an error occurred trying to transfer that item.")
