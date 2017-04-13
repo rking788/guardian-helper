@@ -7,7 +7,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -24,61 +23,6 @@ type BaseResponse struct {
 	ErrorStatus     string      `json:"ErrorStatus"`
 	Message         string      `json:"Message"`
 	MessageData     interface{} `json:"MessageData"`
-}
-
-// ItemsEndpointResponse represents the response from a call to the /Items endpoint
-type ItemsEndpointResponse struct {
-	Response *ItemsResponse `json:"Response"`
-	Base     *BaseResponse
-}
-
-// ItemsResponse is the inner response from the /Items endpoint
-type ItemsResponse struct {
-	Data *ItemsData `json:"data"`
-}
-
-// ItemsData is the data attribute of the /Items response
-type ItemsData struct {
-	Items      []*Item      `json:"items"`
-	Characters []*Character `json:"characters"`
-}
-
-// Item will represent a single inventory item returned by the /Items character
-// endpoint.
-type Item struct {
-	ItemHash       uint   `json:"itemHash"`
-	ItemID         string `json:"itemId"`
-	Quantity       uint   `json:"quantity"`
-	DamageType     uint   `json:"damageType"`
-	DamageTypeHash uint   `json:"damageTypeHash"`
-	//  IsGridComplete `json:"isGridComplete"`
-	TransferStatus uint `json:"transferStatus"`
-	State          uint `json:"state"`
-	CharacterIndex int  `json:"characterIndex"`
-	BucketHash     uint `json:"bucketHash"`
-}
-
-// Character will represent a single character entry returned by the /Items endpoint
-type Character struct {
-	CharacterBase *CharacterBase
-	// NOTE: The rest is probably unused at least for the transferring items command
-}
-
-// CharacterBase represents the base data for a character entry
-// returned by the /Items endpoint.
-type CharacterBase struct {
-	MembershipID           string    `json:"membershipId"`
-	MembershipType         uint      `json:"membershipType"`
-	CharacterID            string    `json:"characterId"`
-	DateLastPlayed         time.Time `json:"dateLastPlayed"`
-	PowerLevel             uint      `json:"powerLevel"`
-	RaceHash               uint      `json:"raceHash"`
-	GenderHash             uint      `json:"genderHash"`
-	ClassHash              uint      `json:"classHash"`
-	CurrentActivityHash    uint      `json:"currentActivityHash"`
-	LastCompletedStoryHash uint      `json:"lastCompletedStoryHash"`
-	GenderType             uint      `json:"genderType"`
-	ClassType              uint      `json:"ClassType"`
 }
 
 // GetAccountResponse is the response from a get current account API call
@@ -109,31 +53,6 @@ type MembershipIDLookUpResponse struct {
 // MembershipData represents the Response portion of the membership ID lookup
 type MembershipData struct {
 	MembershipID string `json:"membershipId"`
-}
-
-// Client is a type that contains all information needed to make requests to the
-// Bungie API.
-type Client struct {
-	*http.Client
-	AccessToken string
-	APIToken    string
-}
-
-func NewClient(accessToken, apiToken string) *Client {
-	return &Client{
-		Client:      http.DefaultClient,
-		AccessToken: accessToken,
-		APIToken:    apiToken,
-	}
-}
-
-// AuthenticationHeaders will generate a map with the required headers to make
-// an authenticated HTTP call to the Bungie API.
-func (c *Client) AuthenticationHeaders() map[string]string {
-	return map[string]string{
-		"X-Api-Key":     c.APIToken,
-		"Authorization": "Bearer " + c.AccessToken,
-	}
 }
 
 // MembershipIDFromDisplayName is responsible for retrieving the Destiny
@@ -172,50 +91,10 @@ func CountItem(itemName, accessToken string) (*alexa.EchoResponse, error) {
 	response := alexa.NewEchoResponse()
 
 	client := NewClient(accessToken, os.Getenv("BUNGIE_API_KEY"))
-	accountChan := make(chan struct {
-		*ItemsEndpointResponse
-		error
-	})
 
-	// Load current user and all items on all characters
-	go func() {
-		start := time.Now()
-		currentAccount := GetCurrentAccount(client)
-		fmt.Println("Time to get current account: ", time.Since(start))
-
-		//currentAccount := <-accountChan
-		if currentAccount == nil {
-			speech := fmt.Sprintf("Sorry Guardian, currently unable to get your account information.")
-			response.OutputSpeech(speech)
-			accountChan <- struct {
-				*ItemsEndpointResponse
-				error
-			}{nil, errors.New("Couldn't get current account info")}
-			return
-			//return response, nil
-		}
-
-		startGetItems := time.Now()
-		// TODO: Figure out how to support multiple accounts, meaning PSN and XBOX
-		userInfo := currentAccount.Response.DestinyAccounts[0].UserInfo
-
-		itemsJSON, err := GetUserItems(userInfo.MembershipType, userInfo.MembershipID, client)
-		if err != nil {
-			fmt.Println("Failed to read the Items response from Bungie!: ", err.Error())
-			//return nil, err
-			accountChan <- struct {
-				*ItemsEndpointResponse
-				error
-			}{nil, errors.New("Failed to read current user's items")}
-			return
-		}
-		fmt.Println("Time to get user's items: ", time.Since(startGetItems))
-
-		accountChan <- struct {
-			*ItemsEndpointResponse
-			error
-		}{itemsJSON, nil}
-	}()
+	// Load all items on all characters
+	itemsChannel := make(chan *AllItemsMsg)
+	go GetAllItemsForCurrentUser(client, itemsChannel)
 
 	startHash := time.Now()
 	// Check common misinterpretations from Alexa
@@ -232,13 +111,13 @@ func CountItem(itemName, accessToken string) (*alexa.EchoResponse, error) {
 
 	fmt.Println("Time to get translation and hash from DB: ", time.Since(startHash))
 
-	itemsJSON, _ := <-accountChan
+	itemsJSON, _ := <-itemsChannel
 	if itemsJSON.error != nil {
 		response.OutputSpeech("Sorry Guardian, there was an error reading your current account information.")
 		return response, nil
 	}
 	startFindItemsMatching := time.Now()
-	itemsData := itemsJSON.Response.Data
+	itemsData := itemsJSON.ItemsEndpointResponse.Response.Data
 	matchingItems := itemsData.findItemsMatchingHash(hash)
 	fmt.Printf("Found %d items entries in characters inventory.\n", len(matchingItems))
 
@@ -260,41 +139,17 @@ func CountItem(itemName, accessToken string) (*alexa.EchoResponse, error) {
 	return response, nil
 }
 
-func TransferItem(itemName, accessToken, sourceClass, destinationClass, countStr string) (*alexa.EchoResponse, error) {
+// TransferItem is responsible for calling the necessary Bungie.net APIs to
+// transfer the specified item to the specified character. The quantity is optional
+// as well as the source class. If no quantity is specified, all of the specific
+// items will be transfered to the particular character.
+func TransferItem(itemName, accessToken, sourceClass, destinationClass string, count int) (*alexa.EchoResponse, error) {
 	response := alexa.NewEchoResponse()
 
 	client := NewClient(accessToken, os.Getenv("BUNGIE_API_KEY"))
-	count := -1
-	if countStr != "" {
-		if tempCount, ok := strconv.Atoi(countStr); ok != nil {
-			if tempCount <= 0 {
-				output := fmt.Sprintf("Sorry Guardian, you need to specify a positive, non-zero count to be transferred, not %d", tempCount)
-				fmt.Println(output)
-				response.OutputSpeech(output)
-				return response, nil
-			}
 
-			count = tempCount
-		} else {
-			response.OutputSpeech("Sorry Guardian, I didn't understand the number you asked to be transferred. If you don't specify a quantity then all will be transferred.")
-			return response, nil
-		}
-	}
-
-	// sourceHash := classNameToHash[sourceClass]
-	// destinationHash := classNameToHash[destinationClass]
-	// if sourceHash == 0 || destHash == 0 {
-	// 	output := fmt.Sprintf("Sorry Guardian, I didn't understand the source (%s) or destination (%s) for the transfer.", sourceClass, destinationClass)
-	// 	fmt.Println(output)
-	// 	response.OutputSpeech(output)
-	// 	return response, nil
-	// }
-
-	accountChan := make(chan *GetAccountResponse)
-	go func() {
-		currentAccount := GetCurrentAccount(client)
-		accountChan <- currentAccount
-	}()
+	itemsChannel := make(chan *AllItemsMsg)
+	go GetAllItemsForCurrentUser(client, itemsChannel)
 
 	// Check common misinterpretations from Alexa
 	if translation, ok := commonAlexaTranslations[itemName]; ok {
@@ -308,23 +163,13 @@ func TransferItem(itemName, accessToken, sourceClass, destinationClass, countStr
 		return response, nil
 	}
 
-	currentAccount := <-accountChan
-	if currentAccount == nil {
-		speech := fmt.Sprintf("Sorry Guardian, currently unable to get your account information.")
-		response.OutputSpeech(speech)
-		return response, nil
-	}
-
-	// TODO: Figure out how to support multiple accounts, meaning PSN and XBOx
-	userInfo := currentAccount.Response.DestinyAccounts[0].UserInfo
-
-	itemsJSON, err := GetUserItems(userInfo.MembershipType, userInfo.MembershipID, client)
-	if err != nil {
+	itemsJSON := <-itemsChannel
+	if itemsJSON.error != nil {
 		fmt.Println("Failed to read the Items response from Bungie!: ", err.Error())
 		return nil, err
 	}
 
-	itemsData := itemsJSON.Response.Data
+	itemsData := itemsJSON.ItemsEndpointResponse.Response.Data
 	matchingItems := itemsData.findItemsMatchingHash(hash)
 	fmt.Printf("Found %d items entries in characters inventory.\n", len(matchingItems))
 
@@ -334,8 +179,8 @@ func TransferItem(itemName, accessToken, sourceClass, destinationClass, countStr
 		return response, nil
 	}
 
-	allChars := itemsJSON.Response.Data.Characters
-	destCharacter, err := findDestinationCharacter(itemsJSON.Response.Data.Characters, destinationClass)
+	allChars := itemsJSON.ItemsEndpointResponse.Response.Data.Characters
+	destCharacter, err := findDestinationCharacter(allChars, destinationClass)
 	if err != nil {
 		output := fmt.Sprintf("Could not find a character with the specified class: %s", destinationClass)
 		fmt.Println(output)
@@ -343,7 +188,9 @@ func TransferItem(itemName, accessToken, sourceClass, destinationClass, countStr
 		return response, nil
 	}
 
-	transferItem(hash, matchingItems, allChars, destCharacter, userInfo.MembershipType, count, client)
+	transferItem(hash, matchingItems, allChars, destCharacter,
+		itemsJSON.GetAccountResponse.Response.DestinyAccounts[0].UserInfo.MembershipType,
+		count, client)
 
 	response.OutputSpeech("All set Guardian.")
 
@@ -357,9 +204,7 @@ func transferItem(itemHash uint, itemSet []*Item, fullCharList []*Character, des
 
 	for _, item := range itemSet {
 
-		if item.CharacterIndex == -1 && destCharacter == nil {
-			continue
-		} else if item.CharacterIndex != -1 && fullCharList[item.CharacterIndex] == destCharacter {
+		if item.CharacterIndex != -1 && fullCharList[item.CharacterIndex] == destCharacter {
 			fmt.Println("Attempting to transfer items to the same character... skipping")
 			continue
 		}
@@ -392,9 +237,7 @@ func transferItem(itemHash uint, itemSet []*Item, fullCharList []*Character, des
 
 			req, _ := http.NewRequest("POST", TransferItemEndpointURL, strings.NewReader(string(jsonBody)))
 			req.Header.Add("Content-Type", "application/json")
-			for key, val := range client.AuthenticationHeaders() {
-				req.Header.Add(key, val)
-			}
+			client.AddAuthHeaders(req)
 
 			resp, err := client.Do(req)
 			if err != nil {
@@ -430,9 +273,7 @@ func transferItem(itemHash uint, itemSet []*Item, fullCharList []*Character, des
 
 	req, _ := http.NewRequest("POST", TransferItemEndpointURL, strings.NewReader(string(jsonBody)))
 	req.Header.Add("Content-Type", "application/json")
-	for key, val := range client.AuthenticationHeaders() {
-		req.Header.Add(key, val)
-	}
+	client.AddAuthHeaders(req)
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -444,20 +285,56 @@ func transferItem(itemHash uint, itemSet []*Item, fullCharList []*Character, des
 	fmt.Printf("Response for transfer request: %s\n", string(respBytes))
 }
 
-func findDestinationCharacter(characters []*Character, class string) (*Character, error) {
+// AllItemsMsg is a type used by channels that need to communicate back from a
+// goroutine to the calling function.
+type AllItemsMsg struct {
+	*ItemsEndpointResponse
+	*GetAccountResponse
+	error
+}
 
-	if class == "vault" {
-		return nil, nil
-	}
+// GetAllItemsForCurrentUser will perform a lookup of the current user based on
+// the OAuth credentials provided by Alexa. Then it will make a request to get
+// all of the items for that user on all characters.
+func GetAllItemsForCurrentUser(client *Client, responseChan chan *AllItemsMsg) {
 
-	destinationHash := classNameToHash[class]
-	for _, char := range characters {
-		if char.CharacterBase.ClassHash == destinationHash {
-			return char, nil
+	start := time.Now()
+	currentAccount := GetCurrentAccount(client)
+	fmt.Println("Time to get current account: ", time.Since(start))
+
+	if currentAccount == nil {
+		fmt.Println("Failed to load current account with the specified access token!")
+		responseChan <- &AllItemsMsg{
+			ItemsEndpointResponse: nil,
+			GetAccountResponse:    nil,
+			error:                 errors.New("Couldn't load current user information"),
 		}
+
+		return
 	}
 
-	return nil, errors.New("could not find the specified destination character")
+	startGetItems := time.Now()
+	// TODO: Figure out how to support multiple accounts, meaning PSN and XBOX,
+	// maybe require it to be specified in the Alexa voice command.
+	userInfo := currentAccount.Response.DestinyAccounts[0].UserInfo
+
+	items, err := GetUserItems(userInfo.MembershipType, userInfo.MembershipID, client)
+	if err != nil {
+		fmt.Println("Failed to read the Items response from Bungie!: ", err.Error())
+		responseChan <- &AllItemsMsg{
+			ItemsEndpointResponse: nil,
+			GetAccountResponse:    currentAccount,
+			error:                 errors.New("Failed to read current user's items: " + err.Error()),
+		}
+		return
+	}
+	fmt.Println("Time to get user's items: ", time.Since(startGetItems))
+
+	responseChan <- &AllItemsMsg{
+		ItemsEndpointResponse: items,
+		GetAccountResponse:    currentAccount,
+		error:                 nil,
+	}
 }
 
 // GetCurrentAccount will request the user info for the current user
@@ -466,9 +343,7 @@ func GetCurrentAccount(client *Client) *GetAccountResponse {
 
 	req, err := http.NewRequest("GET", GetCurrentAccountEndpoint, nil)
 	req.Header.Add("Content-Type", "application/json")
-	for key, val := range client.AuthenticationHeaders() {
-		req.Header.Add(key, val)
-	}
+	client.AddAuthHeaders(req)
 
 	itemsResponse, err := client.Do(req)
 	itemsBytes, err := ioutil.ReadAll(itemsResponse.Body)
@@ -491,9 +366,7 @@ func GetUserItems(membershipType uint, membershipID string, client *Client) (*It
 
 	req, _ := http.NewRequest("GET", endpoint, nil)
 	req.Header.Add("Content-Type", "application/json")
-	for key, val := range client.AuthenticationHeaders() {
-		req.Header.Add(key, val)
-	}
+	client.AddAuthHeaders(req)
 
 	startRequest := time.Now()
 	itemsResponse, _ := client.Client.Do(req)
@@ -510,26 +383,4 @@ func GetUserItems(membershipType uint, membershipID string, client *Client) (*It
 	fmt.Println("Unmarshal items JSON time: ", time.Since(startUnmarshal))
 
 	return itemsJSON, nil
-}
-
-func (data *ItemsData) findItemsMatchingHash(itemHash uint) []*Item {
-	result := make([]*Item, 0)
-
-	for _, item := range data.Items {
-		if item.ItemHash == itemHash {
-			result = append(result, item)
-		}
-	}
-
-	return result
-}
-
-func (data *ItemsData) characterClassNameAtIndex(index int) string {
-	if index == -1 {
-		return "Vault"
-	} else if index >= len(data.Characters) {
-		return "Unknown character"
-	} else {
-		return classHashToName[data.Characters[index].CharacterBase.ClassHash]
-	}
 }

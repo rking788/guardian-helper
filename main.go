@@ -7,11 +7,10 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"os"
-	"strings"
 
-	"bitbucket.org/rking788/guardian-helper/bungie"
+	"bitbucket.org/rking788/guardian-helper/alexa"
 	"github.com/gin-gonic/gin"
-	alexa "github.com/mikeflynn/go-alexa/skillserver"
+	"github.com/mikeflynn/go-alexa/skillserver"
 )
 
 func main() {
@@ -52,24 +51,16 @@ func EchoIntentHandler(ctx *gin.Context) {
 		return
 	}
 
-	echoRequest := alexa.EchoRequest{}
-	json.Unmarshal(requestBytes, &echoRequest)
+	echoRequest := &skillserver.EchoRequest{}
+	json.Unmarshal(requestBytes, echoRequest)
 
-	var response *alexa.EchoResponse
+	var response *skillserver.EchoResponse
 	if echoRequest.GetIntentName() == "CountItem" {
-		item, _ := echoRequest.GetSlotValue("Item")
-		lowerItem := strings.ToLower(item)
-		response, err = bungie.CountItem(lowerItem, echoRequest.Session.User.AccessToken)
+		response = alexa.CountItem(echoRequest)
 	} else if echoRequest.GetIntentName() == "TransferItem" {
-		countStr, _ := echoRequest.GetSlotValue("Count")
-		item, _ := echoRequest.GetSlotValue("Item")
-		sourceClass, _ := echoRequest.GetSlotValue("Source")
-		destinationClass, _ := echoRequest.GetSlotValue("Destination")
-		output := fmt.Sprintf("Transferring %s of your %s from your %s to your %s", countStr, strings.ToLower(item), strings.ToLower(sourceClass), strings.ToLower(destinationClass))
-		fmt.Println(output)
-		response, err = bungie.TransferItem(strings.ToLower(item), echoRequest.Session.User.AccessToken, strings.ToLower(sourceClass), strings.ToLower(destinationClass), countStr)
+		response = alexa.TransferItem(echoRequest)
 	} else {
-		response = alexa.NewEchoResponse()
+		response = skillserver.NewEchoResponse()
 		response.OutputSpeech("Sorry Guardian, I did not understand your request.")
 	}
 
