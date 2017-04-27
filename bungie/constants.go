@@ -74,4 +74,5 @@ var commonAlexaTranslations = map[string]string{
 	"worm for":       "wormspore",
 	"motes":          "mote of light",
 	"motes of light": "mote of light",
+	"spin middle":    "spinmetal",
 }
