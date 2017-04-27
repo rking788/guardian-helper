@@ -38,7 +38,8 @@ func GetItemHashFromName(itemName string) (uint, error) {
 
 	rows, err := db.Table("items").
 		Select("item_hash").
-		Where("item_name = ? AND non_transferrable = ?", itemName, false).
+		Where("item_name = ? AND item_type_name NOT IN ('Material Exchange', '')", itemName).
+		Order("max_stack_size DESC").
 		Rows()
 
 	if err != nil {
