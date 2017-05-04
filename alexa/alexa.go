@@ -13,11 +13,12 @@ import (
 
 // CountItem calls the Bungie API to see count the number of Items on all characters and
 // in the vault.
-func CountItem(echoRequest *skillserver.EchoRequest, echoResponse *skillserver.EchoResponse) {
+func CountItem(echoRequest *skillserver.EchoRequest) (response *skillserver.EchoResponse) {
 
 	accessToken := echoRequest.Session.User.AccessToken
 	if accessToken == "" {
-		echoResponse.
+		response = skillserver.NewEchoResponse()
+		response.
 			OutputSpeech("Sorry Guardian, it looks like your Bungie.net account needs to be linked in the Alexa app.").
 			LinkAccountCard()
 		return
@@ -28,21 +29,21 @@ func CountItem(echoRequest *skillserver.EchoRequest, echoResponse *skillserver.E
 	response, err := bungie.CountItem(lowerItem, accessToken)
 	if err != nil {
 		fmt.Println("Error counting the number of items: ", err.Error())
-		echoResponse.OutputSpeech("Sorry Guardian, an error occurred counting that item.")
-		return
+		response.OutputSpeech("Sorry Guardian, an error occurred counting that item.")
 	}
 
-	*echoResponse = *response
+	return
 }
 
 // TransferItem will attempt to transfer either a specific quantity or all of a
 // specific item to a specified character. The item name and destination are the
 // required fields. The quantity and source are optional.
-func TransferItem(request *skillserver.EchoRequest, echoResponse *skillserver.EchoResponse) {
+func TransferItem(request *skillserver.EchoRequest) (response *skillserver.EchoResponse) {
 
 	accessToken := request.Session.User.AccessToken
 	if accessToken == "" {
-		echoResponse.
+		response = skillserver.NewEchoResponse()
+		response.
 			OutputSpeech("Sorry Guardian, it looks like your Bungie.net account needs to be linked in the Alexa app.").
 			LinkAccountCard()
 		return
@@ -55,13 +56,13 @@ func TransferItem(request *skillserver.EchoRequest, echoResponse *skillserver.Ec
 			if tempCount <= 0 {
 				output := fmt.Sprintf("Sorry Guardian, you need to specify a positive, non-zero count to be transferred, not %d", tempCount)
 				fmt.Println(output)
-				echoResponse.OutputSpeech(output)
+				response.OutputSpeech(output)
 				return
 			}
 
 			count = tempCount
 		} else {
-			echoResponse.OutputSpeech("Sorry Guardian, I didn't understand the number you asked to be transferred. If you don't specify a quantity then all will be transferred.")
+			response.OutputSpeech("Sorry Guardian, I didn't understand the number you asked to be transferred. If you don't specify a quantity then all will be transferred.")
 			return
 		}
 	}
@@ -73,9 +74,10 @@ func TransferItem(request *skillserver.EchoRequest, echoResponse *skillserver.Ec
 	fmt.Println(output)
 	response, err := bungie.TransferItem(strings.ToLower(item), accessToken, strings.ToLower(sourceClass), strings.ToLower(destinationClass), count)
 	if err != nil {
-		echoResponse.OutputSpeech("Sorry Guardian, an error occurred trying to transfer that item.")
+		response = &skillserver.EchoResponse{}
+		response.OutputSpeech("Sorry Guardian, an error occurred trying to transfer that item.")
 		return
 	}
 
-	*echoResponse = *response
+	return
 }
