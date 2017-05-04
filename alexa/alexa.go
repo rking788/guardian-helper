@@ -1,12 +1,14 @@
 package alexa
 
 import (
-	"bitbucket.org/rking788/guardian-helper/bungie"
 	"fmt"
 	"strconv"
 
-	"github.com/mikeflynn/go-alexa/skillserver"
+	"bitbucket.org/rking788/guardian-helper/bungie"
+
 	"strings"
+
+	"github.com/mikeflynn/go-alexa/skillserver"
 )
 
 // CountItem calls the Bungie API to see count the number of Items on all characters and
@@ -21,8 +23,6 @@ func CountItem(echoRequest *skillserver.EchoRequest) (response *skillserver.Echo
 		return
 	}
 
-	fmt.Println("Found access token for testing: ", accessToken)
-
 	item, _ := echoRequest.GetSlotValue("Item")
 	lowerItem := strings.ToLower(item)
 	response, err := bungie.CountItem(lowerItem, accessToken)
@@ -31,7 +31,7 @@ func CountItem(echoRequest *skillserver.EchoRequest) (response *skillserver.Echo
 		response.OutputSpeech("Sorry Guardian, an error occurred counting that item.")
 	}
 
-	return
+	return response
 }
 
 // TransferItem will attempt to transfer either a specific quantity or all of a

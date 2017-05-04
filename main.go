@@ -35,6 +35,7 @@ func EchoIntentHandler(echoRequest *skillserver.EchoRequest, echoResponse *skill
 
 	if echoRequest.GetIntentName() == "CountItem" {
 		echoResponse = alexa.CountItem(echoRequest)
+		fmt.Printf("Returning response from count item: %+v\n", echoResponse)
 	} else if echoRequest.GetIntentName() == "TransferItem" {
 		echoResponse = alexa.TransferItem(echoRequest)
 	} else {
