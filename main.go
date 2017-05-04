@@ -33,6 +33,7 @@ func main() {
 // call from a Alexa command and returning the correct speech or cards.
 func EchoIntentHandler(echoRequest *skillserver.EchoRequest, echoResponse *skillserver.EchoResponse) {
 
+	fmt.Printf("Starting response: %v\n", echoResponse)
 	if echoRequest.GetIntentName() == "CountItem" {
 		echoResponse = alexa.CountItem(echoRequest)
 		fmt.Printf("Returning response from count item: %+v\n", echoResponse)
