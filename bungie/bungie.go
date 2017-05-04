@@ -10,7 +10,7 @@ import (
 	"sync"
 
 	"bitbucket.org/rking788/guardian-helper/db"
-	"github.com/mikeflynn/go-alexa/skillserver"
+	"github.com/rking788/go-alexa/skillserver"
 )
 
 // BaseResponse represents the data returned as part of all of the Bungie API

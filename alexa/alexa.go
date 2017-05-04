@@ -8,7 +8,7 @@ import (
 
 	"strings"
 
-	"github.com/mikeflynn/go-alexa/skillserver"
+	"github.com/rking788/go-alexa/skillserver"
 )
 
 // CountItem calls the Bungie API to see count the number of Items on all characters and

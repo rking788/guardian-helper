@@ -10,10 +10,10 @@
 			"revision": ""
 		},
 		{
-			"checksumSHA1": "DD8FkpJIXDppCrkvWXz5YqasY9I=",
+			"checksumSHA1": "YaVFbXBiYQ/Z2E7xkAniTZIRHRQ=",
 			"path": "github.com/codegangsta/negroni",
-			"revision": "c0db5feaa33826cd5117930c8f4ee5c0f565eec6",
-			"revisionTime": "2017-02-26T00:53:33Z"
+			"revision": "0c3570ad2938a95d5d584eb76304b7f70642e4aa",
+			"revisionTime": "2017-05-02T03:14:59Z"
 		},
 		{
 			"checksumSHA1": "RsNwOto8G8aXIiRrlFn4dtU9q/g=",
@@ -48,8 +48,8 @@
 		{
 			"checksumSHA1": "zmCk+lgIeiOf0Ng9aFP9aFy8ksE=",
 			"path": "github.com/gorilla/mux",
-			"revision": "599cba5e7b6137d46ddf58fb1765f5d928e69604",
-			"revisionTime": "2017-02-28T22:43:54Z"
+			"revision": "4c1c3952b7d9d0a061a3fa7b36fd373ba0398ebc",
+			"revisionTime": "2017-04-27T04:12:50Z"
 		},
 		{
 			"checksumSHA1": "eBTTDO5xSz9V75yoBzSeI+5jvU0=",
@@ -100,8 +100,8 @@
 			"revisionTime": "2017-03-24T00:12:00Z"
 		},
 		{
-			"checksumSHA1": "VralCnILGXLVjwgAju67/KA9UVY=",
-			"path": "github.com/mikeflynn/go-alexa/skillserver",
+			"checksumSHA1": "SiXfw9Dvl67bN1sdfFbPrKd/FLw=",
+			"path": "github.com/rking788/go-alexa/skillserver",
 			"revision": "ca9bde7854923bcf74f5e1591d6d1a596492bb6f",
 			"revisionTime": "2016-12-29T19:34:29Z"
 		},
