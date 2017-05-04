@@ -11,7 +11,6 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"errors"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -71,7 +70,6 @@ func Init(apps map[string]interface{}, router *mux.Router) {
 				echoReq := r.Context().Value("echoRequest").(*EchoRequest)
 				echoResp := NewEchoResponse()
 
-				fmt.Printf("EchoResp in skillserver: %+v\n", echoResp)
 				if echoReq.GetRequestType() == "LaunchRequest" {
 					if app.OnLaunch != nil {
 						app.OnLaunch(echoReq, echoResp)
@@ -88,7 +86,6 @@ func Init(apps map[string]interface{}, router *mux.Router) {
 					http.Error(w, "Invalid request.", http.StatusBadRequest)
 				}
 
-				fmt.Printf("EchoResp in skillserver before String(): %+v\n", echoResp)
 				json, _ := echoResp.String()
 				w.Header().Set("Content-Type", "application/json;charset=UTF-8")
 				w.Write(json)
