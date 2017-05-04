@@ -5,6 +5,8 @@ import (
 	"net/http/httputil"
 	"os"
 
+	"bitbucket.org/rking788/guardian-helper/alexa"
+
 	"github.com/gin-gonic/gin"
 	"github.com/mikeflynn/go-alexa/skillserver"
 )
@@ -33,9 +35,8 @@ func main() {
 func EchoIntentHandler(echoRequest *skillserver.EchoRequest, echoResponse *skillserver.EchoResponse) {
 
 	fmt.Printf("Starting response: %v\n", echoResponse)
-	echoResponse.OutputSpeech("IT finally worked!")
-	return
-	/*if echoRequest.GetIntentName() == "CountItem" {
+
+	if echoRequest.GetIntentName() == "CountItem" {
 		echoResponse = alexa.CountItem(echoRequest)
 		fmt.Printf("Returning response from count item: %+v\n", echoResponse)
 	} else if echoRequest.GetIntentName() == "TransferItem" {
@@ -43,7 +44,7 @@ func EchoIntentHandler(echoRequest *skillserver.EchoRequest, echoResponse *skill
 	} else {
 		echoResponse = skillserver.NewEchoResponse()
 		echoResponse.OutputSpeech("Sorry Guardian, I did not understand your request.")
-	}*/
+	}
 }
 
 func dumpRequest(ctx *gin.Context) {
