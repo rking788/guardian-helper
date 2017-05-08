@@ -193,7 +193,7 @@ func TransferItem(itemName, accessToken, sourceClass, destinationClass string, c
 
 	var output string
 	if count != -1 && actualQuantity < uint(count) {
-		output = fmt.Sprintf("You only had %d %s, all of it has been transferred to your %s", actualQuantity, itemName, destinationClass)
+		output = fmt.Sprintf("You only had %d %s on other characters, all of it has been transferred to your %s", actualQuantity, itemName, destinationClass)
 	} else {
 		output = fmt.Sprintf("All set Guardian, %d %s have been transferred to your %s", actualQuantity, itemName, destinationClass)
 	}

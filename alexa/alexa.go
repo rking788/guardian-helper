@@ -53,7 +53,6 @@ func TransferItem(request *skillserver.EchoRequest) (response *skillserver.EchoR
 	countStr, _ := request.GetSlotValue("Count")
 	count := -1
 	if countStr != "" {
-		fmt.Println("Found count string: ", countStr)
 		tempCount, ok := strconv.Atoi(countStr)
 		if ok != nil {
 			response = skillserver.NewEchoResponse()
