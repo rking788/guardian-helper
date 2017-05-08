@@ -108,7 +108,9 @@ func CountItem(itemName, accessToken string) (*skillserver.EchoResponse, error) 
 
 	itemsJSON, _ := <-itemsChannel
 	if itemsJSON.error != nil {
-		response.OutputSpeech("Sorry Guardian, there was an error reading your current account information.")
+		response.
+			OutputSpeech("Sorry Guardian, I could not load your items from Destiny, you may need to re-link your account in the Alexa app.").
+			LinkAccountCard()
 		return response, nil
 	}
 	itemsData := itemsJSON.ItemsEndpointResponse.Response.Data
@@ -173,7 +175,7 @@ func TransferItem(itemName, accessToken, sourceClass, destinationClass string, c
 	allChars := itemsJSON.ItemsEndpointResponse.Response.Data.Characters
 	destCharacter, err := findDestinationCharacter(allChars, destinationClass)
 	if err != nil {
-		output := fmt.Sprintf("Could not find a character with the specified class: %s", destinationClass)
+		output := fmt.Sprintf("Sorry Guardian, I could not transfer your %s because you do not have any %s characters in Destiny.", itemName, destinationClass)
 		fmt.Println(output)
 		response.OutputSpeech(output)
 		return response, nil

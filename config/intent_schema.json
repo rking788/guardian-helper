@@ -23,7 +23,7 @@
             {
                 "name": "Source",
                 "type:": "CLASS_TYPE"
-            }
+            },
             {
                 "name": "Destination",
                 "type": "CLASS_TYPE"

@@ -29,6 +29,7 @@ func CountItem(echoRequest *skillserver.EchoRequest) (response *skillserver.Echo
 	response, err := bungie.CountItem(lowerItem, accessToken)
 	if err != nil {
 		fmt.Println("Error counting the number of items: ", err.Error())
+		response = skillserver.NewEchoResponse()
 		response.OutputSpeech("Sorry Guardian, an error occurred counting that item.")
 	}
 
@@ -52,6 +53,7 @@ func TransferItem(request *skillserver.EchoRequest) (response *skillserver.EchoR
 	countStr, _ := request.GetSlotValue("Count")
 	count := -1
 	if countStr != "" {
+		fmt.Println("Found count string: ", countStr)
 		if tempCount, ok := strconv.Atoi(countStr); ok != nil {
 			if tempCount <= 0 {
 				output := fmt.Sprintf("Sorry Guardian, you need to specify a positive, non-zero count to be transferred, not %d", tempCount)
@@ -62,6 +64,7 @@ func TransferItem(request *skillserver.EchoRequest) (response *skillserver.EchoR
 
 			count = tempCount
 		} else {
+			response = skillserver.NewEchoResponse()
 			response.OutputSpeech("Sorry Guardian, I didn't understand the number you asked to be transferred. If you don't specify a quantity then all will be transferred.")
 			return
 		}
@@ -74,7 +77,7 @@ func TransferItem(request *skillserver.EchoRequest) (response *skillserver.EchoR
 	fmt.Println(output)
 	response, err := bungie.TransferItem(strings.ToLower(item), accessToken, strings.ToLower(sourceClass), strings.ToLower(destinationClass), count)
 	if err != nil {
-		response = &skillserver.EchoResponse{}
+		response = skillserver.NewEchoResponse()
 		response.OutputSpeech("Sorry Guardian, an error occurred trying to transfer that item.")
 		return
 	}
