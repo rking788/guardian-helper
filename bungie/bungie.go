@@ -95,7 +95,7 @@ func CountItem(itemName, accessToken string) (*skillserver.EchoResponse, error) 
 	go GetAllItemsForCurrentUser(client, itemsChannel)
 
 	// Check common misinterpretations from Alexa
-	if translation, ok := commonAlexaTranslations[itemName]; ok {
+	if translation, ok := commonAlexaItemTranslations[itemName]; ok {
 		itemName = translation
 	}
 
@@ -147,6 +147,12 @@ func TransferItem(itemName, accessToken, sourceClass, destinationClass string, c
 	// Check common misinterpretations from Alexa
 	if translation, ok := commonAlexaItemTranslations[itemName]; ok {
 		itemName = translation
+	}
+	if translation, ok := commonAlexaClassNameTrnaslations[destinationClass]; ok {
+		destinationClass = translation
+	}
+	if translation, ok := commonAlexaClassNameTrnaslations[sourceClass]; ok {
+		sourceClass = translation
 	}
 
 	hash, err := db.GetItemHashFromName(itemName)
