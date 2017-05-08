@@ -225,7 +225,7 @@ func transferItem(itemHash uint, itemSet []*Item, fullCharList []*Character, des
 				numToTransfer = numNeeded
 			}
 		}
-		totalCount += item.Quantity
+		totalCount += numToTransfer
 
 		// If these items are already in the vault, skip it they will be transferred later
 		if item.CharacterIndex == -1 {
@@ -239,7 +239,7 @@ func transferItem(itemHash uint, itemSet []*Item, fullCharList []*Character, des
 			// will go later for all of these.
 			requestBody := map[string]interface{}{
 				"itemReferenceHash": itemHash,
-				"stackSize":         item.Quantity, // TODO: This should support transferring a subset
+				"stackSize":         numToTransfer,
 				"transferToVault":   true,
 				"itemId":            item.ItemID,
 				"characterId":       charID,
@@ -267,7 +267,7 @@ func transferItem(itemHash uint, itemSet []*Item, fullCharList []*Character, des
 
 	requestBody := map[string]interface{}{
 		"itemReferenceHash": itemHash,
-		"stackSize":         totalCount, // TODO: This should support transferring a subset
+		"stackSize":         totalCount,
 		"transferToVault":   false,
 		"itemId":            0,
 		"characterId":       destCharacter.CharacterBase.CharacterID,
