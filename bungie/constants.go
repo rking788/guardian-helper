@@ -65,6 +65,7 @@ const (
 // This will allow us to translate to the correct name before doing the lookup.
 var commonAlexaTranslations = map[string]string{
 	"spin metal":     "spinmetal",
+	"spin mental":    "spinmetal",
 	"passage coins":  "passage coin",
 	"strange coins":  "strange coin",
 	"exotic shards":  "exotic shard",

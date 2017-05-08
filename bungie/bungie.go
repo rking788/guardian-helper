@@ -181,16 +181,23 @@ func TransferItem(itemName, accessToken, sourceClass, destinationClass string, c
 		return response, nil
 	}
 
-	transferItem(hash, matchingItems, allChars, destCharacter,
+	actualQuantity := transferItem(hash, matchingItems, allChars, destCharacter,
 		itemsJSON.GetAccountResponse.Response.DestinyAccounts[0].UserInfo.MembershipType,
 		count, client)
 
-	response.OutputSpeech("All set Guardian.")
+	var output string
+	if count != -1 && actualQuantity < uint(count) {
+		output = fmt.Sprintf("You only had %d %s, all of it was transferred to your %s", actualQuantity, itemName, destinationClass)
+	} else {
+		output = fmt.Sprintf("All set Guardian, %d %s was transferred to your %s", actualQuantity, itemName, destinationClass)
+	}
+
+	response.OutputSpeech(output)
 
 	return response, nil
 }
 
-func transferItem(itemHash uint, itemSet []*Item, fullCharList []*Character, destCharacter *Character, membershipType uint, count int, client *Client) {
+func transferItem(itemHash uint, itemSet []*Item, fullCharList []*Character, destCharacter *Character, membershipType uint, count int, client *Client) uint {
 
 	// TODO: This should probably take the transferStatus field into account,
 	// if the item is NotTransferrable, don't bother trying.
@@ -204,6 +211,13 @@ func transferItem(itemHash uint, itemSet []*Item, fullCharList []*Character, des
 			continue
 		}
 
+		numToTransfer := item.Quantity
+		if count != -1 {
+			numNeeded := uint(count) - totalCount
+			if numToTransfer > numNeeded {
+				numToTransfer = numNeeded
+			}
+		}
 		totalCount += item.Quantity
 
 		// If these items are already in the vault, skip it they will be transferred later
@@ -230,12 +244,16 @@ func transferItem(itemHash uint, itemSet []*Item, fullCharList []*Character, des
 
 			wg.Done()
 		}(item, fullCharList[item.CharacterIndex].CharacterBase.CharacterID)
+
+		if count != -1 && totalCount >= uint(count) {
+			break
+		}
 	}
 
 	// Now transfer all of these items from the vault to the destination character
 	if destCharacter == nil {
 		// If the destination is the vault... then we are done already
-		return
+		return totalCount
 	}
 
 	wg.Wait()
@@ -250,6 +268,8 @@ func transferItem(itemHash uint, itemSet []*Item, fullCharList []*Character, des
 	}
 
 	client.PostTransferItem(requestBody)
+
+	return totalCount
 }
 
 // AllItemsMsg is a type used by channels that need to communicate back from a
