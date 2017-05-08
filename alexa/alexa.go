@@ -54,20 +54,21 @@ func TransferItem(request *skillserver.EchoRequest) (response *skillserver.EchoR
 	count := -1
 	if countStr != "" {
 		fmt.Println("Found count string: ", countStr)
-		if tempCount, ok := strconv.Atoi(countStr); ok != nil {
-			if tempCount <= 0 {
-				output := fmt.Sprintf("Sorry Guardian, you need to specify a positive, non-zero count to be transferred, not %d", tempCount)
-				fmt.Println(output)
-				response.OutputSpeech(output)
-				return
-			}
-
-			count = tempCount
-		} else {
+		tempCount, ok := strconv.Atoi(countStr)
+		if ok != nil {
 			response = skillserver.NewEchoResponse()
-			response.OutputSpeech("Sorry Guardian, I didn't understand the number you asked to be transferred. If you don't specify a quantity then all will be transferred.")
+			response.OutputSpeech("Sorry Guardian, I didn't understand the number you asked to be transferred. Do not specify a quantity if you want all to be transferred.")
 			return
 		}
+
+		if tempCount <= 0 {
+			output := fmt.Sprintf("Sorry Guardian, you need to specify a positive, non-zero number to be transferred, not %d", tempCount)
+			fmt.Println(output)
+			response.OutputSpeech(output)
+			return
+		}
+
+		count = tempCount
 	}
 
 	item, _ := request.GetSlotValue("Item")
