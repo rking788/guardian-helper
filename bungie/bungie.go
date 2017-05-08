@@ -145,7 +145,7 @@ func TransferItem(itemName, accessToken, sourceClass, destinationClass string, c
 	go GetAllItemsForCurrentUser(client, itemsChannel)
 
 	// Check common misinterpretations from Alexa
-	if translation, ok := commonAlexaTranslations[itemName]; ok {
+	if translation, ok := commonAlexaItemTranslations[itemName]; ok {
 		itemName = translation
 	}
 
@@ -187,9 +187,9 @@ func TransferItem(itemName, accessToken, sourceClass, destinationClass string, c
 
 	var output string
 	if count != -1 && actualQuantity < uint(count) {
-		output = fmt.Sprintf("You only had %d %s, all of it was transferred to your %s", actualQuantity, itemName, destinationClass)
+		output = fmt.Sprintf("You only had %d %s, all of it has been transferred to your %s", actualQuantity, itemName, destinationClass)
 	} else {
-		output = fmt.Sprintf("All set Guardian, %d %s was transferred to your %s", actualQuantity, itemName, destinationClass)
+		output = fmt.Sprintf("All set Guardian, %d %s have been transferred to your %s", actualQuantity, itemName, destinationClass)
 	}
 
 	response.OutputSpeech(output)
@@ -214,6 +214,7 @@ func transferItem(itemHash uint, itemSet []*Item, fullCharList []*Character, des
 		numToTransfer := item.Quantity
 		if count != -1 {
 			numNeeded := uint(count) - totalCount
+			fmt.Printf("Getting to transfer logic: needed=%d, toTransfer=%d\n", numNeeded, numToTransfer)
 			if numToTransfer > numNeeded {
 				numToTransfer = numNeeded
 			}

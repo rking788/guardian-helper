@@ -63,7 +63,7 @@ const (
 
 // Alexa doesn't understand some of the dsetiny items or splits them into separate words
 // This will allow us to translate to the correct name before doing the lookup.
-var commonAlexaTranslations = map[string]string{
+var commonAlexaItemTranslations = map[string]string{
 	"spin metal":     "spinmetal",
 	"spin mental":    "spinmetal",
 	"passage coins":  "passage coin",
@@ -76,4 +76,9 @@ var commonAlexaTranslations = map[string]string{
 	"motes":          "mote of light",
 	"motes of light": "mote of light",
 	"spin middle":    "spinmetal",
+}
+
+var commonAlexaClassNameTrnaslations = map[string]string{
+	"fault": "vault",
+	"tatum": "titan",
 }
