@@ -12,13 +12,16 @@ import (
 )
 
 // Applications is a definition of the Alexa applications running on this server.
-var Applications = map[string]interface{}{
-	"/echo/guardian-helper": skillserver.EchoApplication{ // Route
-		AppID:    os.Getenv("ALEXA_APP_ID"), // Echo App ID from Amazon Dashboard
-		OnIntent: EchoIntentHandler,
-		OnLaunch: EchoIntentHandler,
-	},
-}
+var (
+	Applications = map[string]interface{}{
+		"/echo/guardian-helper": skillserver.EchoApplication{ // Route
+			AppID:          os.Getenv("ALEXA_APP_ID"), // Echo App ID from Amazon Dashboard
+			OnIntent:       EchoIntentHandler,
+			OnLaunch:       EchoIntentHandler,
+			OnSessionEnded: EchoSessionEndedHandler,
+		},
+	}
+)
 
 func main() {
 
@@ -30,19 +33,38 @@ func main() {
 
 // Alexa skill related functions
 
+// EchoSessionEndedHandler is responsible for cleaning up an open session since the user has quit the session.
+func EchoSessionEndedHandler(echoRequest *skillserver.EchoRequest, echoResponse *skillserver.EchoResponse) {
+	*echoResponse = *skillserver.NewEchoResponse()
+
+	alexa.ClearSession(echoRequest.GetSessionID())
+}
+
 // EchoIntentHandler is a handler method that is responsible for receiving the
 // call from a Alexa command and returning the correct speech or cards.
 func EchoIntentHandler(echoRequest *skillserver.EchoRequest, echoResponse *skillserver.EchoResponse) {
 
 	var response *skillserver.EchoResponse
 
-	if echoRequest.GetIntentName() == "CountItem" {
+	fmt.Println("Echo request with type: ", echoRequest.GetRequestType())
+
+	// See if there is an existing session, or create a new one.
+	session := alexa.GetSession(echoRequest.GetSessionID())
+	alexa.SaveSession(session)
+
+	if echoRequest.GetRequestType() == "LaunchRequest" {
+		response = alexa.WelcomePrompt(echoRequest)
+	} else if echoRequest.GetIntentName() == "CountItem" {
 		response = alexa.CountItem(echoRequest)
 	} else if echoRequest.GetIntentName() == "TransferItem" {
 		response = alexa.TransferItem(echoRequest)
 	} else {
 		response = skillserver.NewEchoResponse()
 		response.OutputSpeech("Sorry Guardian, I did not understand your request.")
+	}
+
+	if response.Response.ShouldEndSession {
+		alexa.ClearSession(session.ID)
 	}
 
 	*echoResponse = *response
