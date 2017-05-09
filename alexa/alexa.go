@@ -53,7 +53,7 @@ func GetSession(sessionID string) (session *Session) {
 	key := fmt.Sprintf("sessions:%s", sessionID)
 	reply, err := redis.String(conn.Do("GET", key))
 	if err != nil {
-		fmt.Println("Failed to read session from cache:", err.Error())
+		// NOTE: This is a normal situation, if the session is not stored in the cache, it will hit this condition.
 		return
 	}
 
