@@ -58,6 +58,10 @@ func EchoIntentHandler(echoRequest *skillserver.EchoRequest, echoResponse *skill
 		response = alexa.CountItem(echoRequest)
 	} else if echoRequest.GetIntentName() == "TransferItem" {
 		response = alexa.TransferItem(echoRequest)
+	} else if echoRequest.GetIntentName() == "AMAZON.HelpIntent" {
+		response = skillserver.NewEchoResponse()
+	} else if echoRequest.GetIntentName() == "AMAZON.StopIntent" {
+		response = skillserver.NewEchoResponse()
 	} else {
 		response = skillserver.NewEchoResponse()
 		response.OutputSpeech("Sorry Guardian, I did not understand your request.")

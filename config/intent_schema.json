@@ -1,34 +1,34 @@
 {
   "intents": [
     {
-      "intent": "CountItem",
       "slots": [
         {
-            "name": "Item",
-            "type": "ITEM_TYPE"
+          "name": "Item",
+          "type": "ITEM_TYPE"
         }
-      ]
+      ],
+      "intent": "CountItem"
     },
     {
-        "intent": "TransferItem",
-        "slots": [
-            {
-              "name": "Count",
-              "type": "AMAZON.NUMBER"
-            },
-            {
-                "name": "Item",
-                "type": "ITEM_TYPE"
-            },
-            {
-                "name": "Source",
-                "type:": "CLASS_TYPE"
-            },
-            {
-                "name": "Destination",
-                "type": "CLASS_TYPE"
-            }
-        ]
+      "slots": [
+        {
+          "name": "Count",
+          "type": "AMAZON.NUMBER"
+        },
+        {
+          "name": "Item",
+          "type": "ITEM_TYPE"
+        },
+        {
+          "name": "Destination",
+          "type": "CLASS_TYPE"
+        },
+        {
+          "name": "Source",
+          "type": "CLASS_TYPE"
+        }
+      ],
+      "intent": "TransferItem"
     }
   ]
 }
