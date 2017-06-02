@@ -63,6 +63,7 @@ func NewEchoResponse() *EchoResponse {
 		Response: EchoRespBody{
 			ShouldEndSession: true,
 		},
+		SessionAttributes: make(map[string]interface{}),
 	}
 
 	return er
@@ -137,6 +138,17 @@ func (this *EchoResponse) Reprompt(text string) *EchoResponse {
 	return this
 }
 
+func (this *EchoResponse) RepromptSSML(text string) *EchoResponse {
+	this.Response.Reprompt = &EchoReprompt{
+		OutputSpeech: EchoRespPayload{
+			Type: "SSML",
+			Text: text,
+		},
+	}
+
+	return this
+}
+
 func (this *EchoResponse) EndSession(flag bool) *EchoResponse {
 	this.Response.ShouldEndSession = flag
 
@@ -166,10 +178,8 @@ type EchoSession struct {
 	Application struct {
 		ApplicationID string `json:"applicationId"`
 	} `json:"application"`
-	Attributes struct {
-		String map[string]interface{} `json:"string"`
-	} `json:"attributes"`
-	User struct {
+	Attributes map[string]interface{} `json:"attributes"`
+	User       struct {
 		UserID      string `json:"userId"`
 		AccessToken string `json:"accessToken,omitempty"`
 	} `json:"user"`

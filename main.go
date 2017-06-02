@@ -8,7 +8,7 @@ import (
 	"bitbucket.org/rking788/guardian-helper/alexa"
 
 	"github.com/gin-gonic/gin"
-	"github.com/rking788/go-alexa/skillserver"
+	"github.com/mikeflynn/go-alexa/skillserver"
 )
 
 // Applications is a definition of the Alexa applications running on this server.

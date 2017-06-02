@@ -29,6 +29,12 @@
         }
       ],
       "intent": "TransferItem"
+    },
+    {
+        "intent": "AMAZON.HelpIntent"
+    },
+    {
+        "intent": "AMAZON.StopIntent"
     }
   ]
 }

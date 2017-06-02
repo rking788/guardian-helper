@@ -12,7 +12,7 @@ import (
 	"strings"
 
 	"github.com/garyburd/redigo/redis"
-	"github.com/rking788/go-alexa/skillserver"
+	"github.com/mikeflynn/go-alexa/skillserver"
 )
 
 // Session is responsible for storing information related to a specific skill invocation.

@@ -10,10 +10,10 @@
 			"revision": ""
 		},
 		{
-			"checksumSHA1": "YaVFbXBiYQ/Z2E7xkAniTZIRHRQ=",
+			"checksumSHA1": "NQWrITjQCpJdsRzaPQIsfClTF6M=",
 			"path": "github.com/codegangsta/negroni",
-			"revision": "0c3570ad2938a95d5d584eb76304b7f70642e4aa",
-			"revisionTime": "2017-05-02T03:14:59Z"
+			"revision": "1d8981a52d6bda4467a9faacf3fdddd38222dfc4",
+			"revisionTime": "2017-05-06T02:27:41Z"
 		},
 		{
 			"checksumSHA1": "2UmMbNHc8FBr98mJFN1k8ISOIHk=",
@@ -58,20 +58,14 @@
 			"revisionTime": "2016-08-17T18:46:32Z"
 		},
 		{
-			"checksumSHA1": "zmCk+lgIeiOf0Ng9aFP9aFy8ksE=",
+			"checksumSHA1": "m+Xb6aeLpAjIjq9Utnicv+e96TQ=",
 			"path": "github.com/gorilla/mux",
-			"revision": "4c1c3952b7d9d0a061a3fa7b36fd373ba0398ebc",
-			"revisionTime": "2017-04-27T04:12:50Z"
+			"revision": "043ee6597c29786140136a5747b6a886364f5282",
+			"revisionTime": "2017-05-24T00:31:38Z"
 		},
 		{
 			"checksumSHA1": "eBTTDO5xSz9V75yoBzSeI+5jvU0=",
 			"path": "github.com/jinzhu/gorm",
-			"revision": "45ccb134373e7d9fa76d5987a6fed6cd5a5adfd4",
-			"revisionTime": "2017-03-27T15:13:47Z"
-		},
-		{
-			"checksumSHA1": "4VZ1gLZHMumRjV3fclS1aX8S1aQ=",
-			"path": "github.com/jinzhu/gorm/dialects/sqlite",
 			"revision": "45ccb134373e7d9fa76d5987a6fed6cd5a5adfd4",
 			"revisionTime": "2017-03-27T15:13:47Z"
 		},
@@ -106,16 +100,10 @@
 			"revisionTime": "2017-03-07T16:30:44Z"
 		},
 		{
-			"checksumSHA1": "Ef3+gi97QEvLS9VonbjOF/cZnDQ=",
-			"path": "github.com/mattn/go-sqlite3",
-			"revision": "b2e464529e88db676302aa63a4ce36711633950e",
-			"revisionTime": "2017-03-24T00:12:00Z"
-		},
-		{
-			"checksumSHA1": "SiXfw9Dvl67bN1sdfFbPrKd/FLw=",
-			"path": "github.com/rking788/go-alexa/skillserver",
-			"revision": "ca9bde7854923bcf74f5e1591d6d1a596492bb6f",
-			"revisionTime": "2016-12-29T19:34:29Z"
+			"checksumSHA1": "M4CsuzpzAj3htNmia+NOIb52M/M=",
+			"path": "github.com/mikeflynn/go-alexa/skillserver",
+			"revision": "5d4071c39457e5022c5226ca41a9e1494c0d31a8",
+			"revisionTime": "2017-05-31T11:05:42Z"
 		},
 		{
 			"checksumSHA1": "Y+HGqEkYM15ir+J93MEaHdyFy0c=",
