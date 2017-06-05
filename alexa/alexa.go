@@ -113,9 +113,9 @@ func WelcomePrompt(echoRequest *skillserver.EchoRequest) (response *skillserver.
 func HelpPrompt(echoRequest *skillserver.EchoRequest) (response *skillserver.EchoResponse) {
 	response = skillserver.NewEchoResponse()
 
-	response.OutputSpeech("Welcome Guardian, I am here to help manage your Destiny in-game inventory. You can ask" +
-		"me to transfer items between any of your available characters including the vault. You can also ask how many of a" +
-		"specific item you have.").
+	response.OutputSpeech("Welcome Guardian, I am here to help manage your Destiny in-game inventory. You can ask " +
+		"me to transfer items between any of your available characters including the vault. You can also ask how many of an " +
+		"item you have.").
 		EndSession(false)
 
 	return
