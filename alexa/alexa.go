@@ -108,6 +108,19 @@ func WelcomePrompt(echoRequest *skillserver.EchoRequest) (response *skillserver.
 	return
 }
 
+// HelpPrompt provides the required information to satisfy the HelpIntent built-in Alexa intent. This should
+// provider information to the user to let them know what the skill can do without providing exact commands.
+func HelpPrompt(echoRequest *skillserver.EchoRequest) (response *skillserver.EchoResponse) {
+	response = skillserver.NewEchoResponse()
+
+	response.OutputSpeech("Welcome Guardian, I am here to help manage your Destiny in-game inventory. You can ask" +
+		"me to transfer items between any of your available characters including the vault. You can also ask how many of a" +
+		"specific item you have.").
+		EndSession(false)
+
+	return
+}
+
 // CountItem calls the Bungie API to see count the number of Items on all characters and
 // in the vault.
 func CountItem(echoRequest *skillserver.EchoRequest) (response *skillserver.EchoResponse) {
