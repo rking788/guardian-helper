@@ -63,6 +63,8 @@ func EchoIntentHandler(echoRequest *skillserver.EchoRequest, echoResponse *skill
 		response = alexa.HelpPrompt(echoRequest)
 	} else if echoRequest.GetIntentName() == "AMAZON.StopIntent" {
 		response = skillserver.NewEchoResponse()
+	} else if echoRequest.GetIntentName() == "AMAZON.CancelIntent" {
+		response = skillserver.NewEchoResponse()
 	} else {
 		response = skillserver.NewEchoResponse()
 		response.OutputSpeech("Sorry Guardian, I did not understand your request.")
