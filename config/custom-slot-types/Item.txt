@@ -1,0 +1,312 @@
+access key
+addendum
+aksis core
+ammo synthesis
+anti-grav nodes
+antigrav fuselage
+antiquated rune
+arc amplifiers
+arc inducers
+arctic survivalist
+armor core
+armor materials
+ascendant energy
+ascendant raisins
+ascendant shard
+auto rifle telemetry
+axiomatic beads
+bad dream
+bank test
+black hammer runestone
+black wax idol
+blade of famine
+blighted ether
+blue chroma
+blue polyphage
+bone trinkets
+bore rune
+born in fire
+bracelet of ana bray
+bureau of aeronautics
+cabal battle plans
+calcified fragment
+callista plating
+campaign medals
+carrion
+celebratory bundle
+centurion field cyphers
+chromatic jackolyte
+cold between stars
+coordinates to venus
+corrupted matter
+crawl of creeps
+crimson candy
+crucible assassin
+crucible commendation
+crucible marks
+crucible reputation booster
+cryptmaster's orb
+custom horn kit
+cyclops mind core
+daily heroic story
+dark nuclei
+days of iron ornament
+dead ghost
+destabilization matrix
+distorted body armor
+distorted boots
+distorted gauntlets
+distorted heavy weapon
+distorted helmet
+distorted primary weapon
+distorted special weapon
+docking caps
+dormant siva cluster
+dragonsbane
+draksis's logbook
+dunemaker
+dusty iron engram
+dvalin-ras30-fr004
+dvalin-ras432-fr003
+dvalin-ras8711-fr002
+dvalin-ras93-fr001
+emblem
+enamel caps
+encrypted engram
+epoch splinter
+essence of darkness
+essence of the feast
+ether seeds
+ether sups
+ethereal spines
+etheric light
+exotic armor shard
+exotic shard
+exotic shards
+exotic weapon core
+expired elders' sigil
+faction vote
+fade shard
+fallen assassin
+fallen ether
+fallen shiplinks
+faron cell
+faunic essence
+felwinter souvenir
+festival of the lost candy
+flawless vigil ornament
+flight of shadows
+focused light
+focusing lenses
+force harnesses
+full candy satchel
+fused tomb-stone
+fusion rifle telemetry
+fusor proxy drive
+galliot xg-1 throttle
+gifts of the lost
+glass needles
+glass shards
+glimmer
+grafted bones
+green chroma
+guardian's gift
+hadium flake
+hadronic essence
+hand cannon telemetry
+hard point glass
+hard-point plating
+heart of gold
+heavy ammo synthesis
+heavy power coupling
+heavy roto joints
+heavy telemetry
+helium filaments
+heuristic light
+hive ember
+hive rune
+hollow-point plating
+hoodoom
+horn relay
+house banners
+house of judgment reputation booster
+hunter engram
+husk flakes
+iconoclast
+indomitable light
+induction rods
+ionized shell harmonics
+iron engram
+iron lords' legacy
+isenfyre token
+jackolyte
+key to the world's grave
+last warmind
+legacy of the lost
+legendary marks
+lingering vestige
+machine gun telemetry
+magenta chroma
+magweld wire
+marrow dust
+medallion of iron
+medallion redeemed
+meteorite
+minotaur warp core
+moldering shard
+moonglow
+mote of light
+motes of light
+nanohance
+network keys
+new message in tower
+nls drive
+not a toy
+objective complete
+orange chroma
+paper glue
+passage coin
+passage coins
+perfected ornament
+plasma confinement control module 1
+plasma confinement control module 2
+plasma confinement control module 3
+plasteel hull plating
+plasteel plating
+primary telemetry
+prototype
+pujari's ring
+pulsar core
+pulse rifle telemetry
+quark cantor
+queen's command
+queen's wrath
+racer's toolkit
+radiant energy
+radiant shard
+radiant treasure
+ragabone
+reassembled ikelos fusion core
+reciprocal rune
+red chroma
+relic iron
+resupply codes
+rocket launcher telemetry
+rose of acid
+rose of corruption
+roto joints
+rotten candy
+royal flush
+sapphire wire
+scalpel leech
+scavenged scraps
+scout rifle telemetry
+scrambled engram
+scrambled supply crate
+scrap castings
+sensor whips
+sequel
+seraph energy cores
+shader data
+shattered tech-witch brooch
+ship shader template
+shock cores
+shock hazard
+shotgun telemetry
+shroud of ir anûk
+siege engine tech
+silken codex
+silver
+silver bullet
+silver dust
+siva cache key
+siva key fragments
+skeleton key
+skins box
+slap channels
+sleepless gaze
+slug screws
+sniper rifle telemetry
+snow dreg
+spark of light
+sparrow racing: bugs on the windshield
+sparrow racing: go big or go home
+sparrow racing: mars pacesetter
+sparrow racing: martian monopoly
+sparrow racing: pacesetter
+sparrow racing: speed bumps
+sparrow racing: threading the needle
+sparrow racing: through the gates
+sparrow racing: trick rider
+sparrow racing: venus pacesetter
+sparrow racing: venusian victory lane
+sparrow racing: wear the shiny off
+special ammo synthesis
+special delivery
+special ops
+special requisition
+special telemetry
+spent displacer
+spinmetal
+spirit bloom
+splicer key
+srl champion's ornament
+stasis disruptors
+steel witch
+sterling treasure
+stolen rune
+storm's reproach
+strange coin
+strange coins
+stream syphons
+stroke of midnight
+subclass boost
+superspy
+swivel turrets
+taken chronoshards
+targeting schema
+tech-witch brooch
+temper cloth
+terra coil
+the gate lord's eye
+the head of the gate lord
+the ravenous heart
+the rock
+the wolves remember
+thread-metal strands
+three of coins
+titan engram
+token of flight
+token of identity
+token of judgment
+torchlight binding
+tower link
+treasure key
+treasures of the dawning
+treasures of the lost
+trials and tribulations bundle
+valorous light
+vanguard commendation
+vanguard marks
+vanguard reputation booster
+vector shard
+vehicle shader template
+vex interface device
+vex mind core
+vex raid rare
+void shackles
+vorpal shade
+vosik core
+warlock engram
+weapon core
+weapon kit
+weapon parts
+whim of rahool
+white chroma
+white witch
+wire wraps
+wolfship display
+wormspore
+worn sack
+wyvern casing
+yellow chroma

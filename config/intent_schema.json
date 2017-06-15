@@ -1,0 +1,43 @@
+{
+  "intents": [
+    {
+      "slots": [
+        {
+          "name": "Item",
+          "type": "ITEM_TYPE"
+        }
+      ],
+      "intent": "CountItem"
+    },
+    {
+      "slots": [
+        {
+          "name": "Count",
+          "type": "AMAZON.NUMBER"
+        },
+        {
+          "name": "Item",
+          "type": "ITEM_TYPE"
+        },
+        {
+          "name": "Destination",
+          "type": "CLASS_TYPE"
+        },
+        {
+          "name": "Source",
+          "type": "CLASS_TYPE"
+        }
+      ],
+      "intent": "TransferItem"
+    },
+    {
+        "intent": "AMAZON.HelpIntent"
+    },
+    {
+        "intent": "AMAZON.StopIntent"
+    },
+    {
+        "intent": "AMAZON.CancelIntent"
+    }
+  ]
+}
