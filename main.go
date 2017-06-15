@@ -2,67 +2,79 @@ package main
 
 import (
 	"fmt"
-	"net/http"
 	"net/http/httputil"
 	"os"
 
+	"bitbucket.org/rking788/guardian-helper/alexa"
+
 	"github.com/gin-gonic/gin"
+	"github.com/mikeflynn/go-alexa/skillserver"
 )
 
-// RootHandler is responsible for just responding with a String... that is all
-// for now.
-func RootHandler(ctx *gin.Context) {
-	ctx.String(http.StatusOK, "Welcome!\n")
-}
+// Applications is a definition of the Alexa applications running on this server.
+var (
+	Applications = map[string]interface{}{
+		"/echo/guardian-helper": skillserver.EchoApplication{ // Route
+			AppID:          os.Getenv("ALEXA_APP_ID"), // Echo App ID from Amazon Dashboard
+			OnIntent:       EchoIntentHandler,
+			OnLaunch:       EchoIntentHandler,
+			OnSessionEnded: EchoSessionEndedHandler,
+		},
+	}
+)
 
 func main() {
 
 	port := os.Getenv("PORT")
 
-	router := gin.New()
-	router.Use(gin.Logger())
-
-	router.GET("/", RootHandler)
-
-	// From Alexa to be redirected to the Bungie Authorization URL
-	router.GET("/auth", AuthGetHandler)
-	router.POST("/auth", AuthPostHandler)
-
-	router.GET("auth-code-response", AuthCodeResponseHandler)
-
-	router.GET("tokens", TokenHandler)
-	router.POST("tokens", PostTokenHandler)
-
 	fmt.Println(fmt.Sprintf("Start listening on port(%s)", port))
-
-	router.Run(":" + port)
+	skillserver.Run(Applications, port)
 }
 
-func AuthGetHandler(ctx *gin.Context) {
-	dumpRequest(ctx)
-	SharedAuthHandler(ctx)
+// Alexa skill related functions
+
+// EchoSessionEndedHandler is responsible for cleaning up an open session since the user has quit the session.
+func EchoSessionEndedHandler(echoRequest *skillserver.EchoRequest, echoResponse *skillserver.EchoResponse) {
+	*echoResponse = *skillserver.NewEchoResponse()
+
+	alexa.ClearSession(echoRequest.GetSessionID())
 }
 
-func AuthPostHandler(ctx *gin.Context) {
-	dumpRequest(ctx)
-	SharedAuthHandler(ctx)
-}
+// EchoIntentHandler is a handler method that is responsible for receiving the
+// call from a Alexa command and returning the correct speech or cards.
+func EchoIntentHandler(echoRequest *skillserver.EchoRequest, echoResponse *skillserver.EchoResponse) {
 
-func SharedAuthHandler(ctx *gin.Context) {
-	ctx.Redirect(http.StatusSeeOther, "https://www.bungie.net/en/Application/Authorize/2579")
-}
+	var response *skillserver.EchoResponse
 
-func AuthCodeResponseHandler(ctx *gin.Context) {
-	dumpRequest(ctx)
-	ctx.Redirect(http.StatusFound, "https://layla.amazon.com/api/skill/link/M2H4SPMARTTC13")
-}
+	fmt.Println("Echo request with type: ", echoRequest.GetRequestType())
+	fmt.Println("Echo request intent name: ", echoRequest.GetIntentName())
 
-func TokenHandler(ctx *gin.Context) {
-	dumpRequest(ctx)
-}
+	// See if there is an existing session, or create a new one.
+	session := alexa.GetSession(echoRequest.GetSessionID())
+	alexa.SaveSession(session)
 
-func PostTokenHandler(ctx *gin.Context) {
-	dumpRequest(ctx)
+	if echoRequest.GetRequestType() == "LaunchRequest" {
+		response = alexa.WelcomePrompt(echoRequest)
+	} else if echoRequest.GetIntentName() == "CountItem" {
+		response = alexa.CountItem(echoRequest)
+	} else if echoRequest.GetIntentName() == "TransferItem" {
+		response = alexa.TransferItem(echoRequest)
+	} else if echoRequest.GetIntentName() == "AMAZON.HelpIntent" {
+		response = alexa.HelpPrompt(echoRequest)
+	} else if echoRequest.GetIntentName() == "AMAZON.StopIntent" {
+		response = skillserver.NewEchoResponse()
+	} else if echoRequest.GetIntentName() == "AMAZON.CancelIntent" {
+		response = skillserver.NewEchoResponse()
+	} else {
+		response = skillserver.NewEchoResponse()
+		response.OutputSpeech("Sorry Guardian, I did not understand your request.")
+	}
+
+	if response.Response.ShouldEndSession {
+		alexa.ClearSession(session.ID)
+	}
+
+	*echoResponse = *response
 }
 
 func dumpRequest(ctx *gin.Context) {
