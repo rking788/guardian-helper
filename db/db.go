@@ -63,6 +63,7 @@ func GetItemHashFromName(itemName string) (uint, error) {
 
 	if hash == 0 {
 		fmt.Println("Didn't find any transferrable items with that name: ", itemName)
+		InsertUnknownValueIntoTable(itemName, UnknownItemTable)
 		return 0, errors.New("No items founds")
 	}
 
