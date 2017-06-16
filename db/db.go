@@ -10,6 +10,13 @@ import (
 	_ "github.com/lib/pq" // Only want to import the interface here
 )
 
+const (
+	// UnknownClassTable is the name of the table that will hold all the unknown class values provided by Alexa
+	UnknownClassTable = "unknown_classes"
+	// UnknownItemTable is the name of the table that will hold the unknown item name values passed by Alexa
+	UnknownItemTable = "unknown_items"
+)
+
 // GetDBConnection is a helper for getting a connection to the DB based on
 // environment variables or some other method.
 func GetDBConnection() (*gorm.DB, error) {
@@ -44,6 +51,7 @@ func GetItemHashFromName(itemName string) (uint, error) {
 
 	if err != nil {
 		fmt.Println("Failed to get item hash for name: ", itemName)
+		InsertUnknownValueIntoTable(itemName, UnknownItemTable)
 		return 0, errors.New("Item lookup failed")
 	}
 
@@ -59,4 +67,19 @@ func GetItemHashFromName(itemName string) (uint, error) {
 	}
 
 	return hash, nil
+}
+
+// InsertUnknownValueIntoTable is a helper method for inserting a value into the specified table.
+// This is used when a value for a slot type is not usable. For example when a class name for a character
+// is not a valid Destiny class name.
+func InsertUnknownValueIntoTable(value, tableName string) {
+
+	conn, err := GetDBConnection()
+	if err != nil {
+		fmt.Println("Failed to get database connection inserting unknown value!")
+		return
+	}
+	defer conn.Close()
+
+	conn.Exec("INSERT INTO "+tableName+" (value) VALUES(?)", value)
 }

@@ -188,6 +188,7 @@ func TransferItem(request *skillserver.EchoRequest) (response *skillserver.EchoR
 		response.OutputSpeech("Sorry Guardian, you must specify a destination for the items to be transferred.")
 		return
 	}
+
 	output := fmt.Sprintf("Transferring %d of your %s from your %s to your %s", count, strings.ToLower(item), strings.ToLower(sourceClass), strings.ToLower(destinationClass))
 	fmt.Println(output)
 	response, err := bungie.TransferItem(strings.ToLower(item), accessToken, strings.ToLower(sourceClass), strings.ToLower(destinationClass), count)
