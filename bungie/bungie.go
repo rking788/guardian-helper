@@ -184,6 +184,8 @@ func TransferItem(itemName, accessToken, sourceClass, destinationClass string, c
 		output := fmt.Sprintf("Sorry Guardian, I could not transfer your %s because you do not have any %s characters in Destiny.", itemName, destinationClass)
 		fmt.Println(output)
 		response.OutputSpeech(output)
+
+		db.InsertUnknownValueIntoTable(destinationClass, db.UnknownClassTable)
 		return response, nil
 	}
 
