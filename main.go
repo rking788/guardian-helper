@@ -46,12 +46,6 @@ func EchoIntentHandler(echoRequest *skillserver.EchoRequest, echoResponse *skill
 
 	var response *skillserver.EchoResponse
 
-<<<<<<< HEAD
-	fmt.Println("Echo request with type: ", echoRequest.GetRequestType())
-	fmt.Println("Echo request intent name: ", echoRequest.GetIntentName())
-
-=======
->>>>>>> 508b922cc20c5a1ee2fe0e0d48731b1aa346f840
 	// See if there is an existing session, or create a new one.
 	session := alexa.GetSession(echoRequest.GetSessionID())
 	alexa.SaveSession(session)
