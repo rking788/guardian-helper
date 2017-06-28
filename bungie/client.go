@@ -48,19 +48,19 @@ func (c *Client) AuthenticationHeaders() map[string]string {
 // based on the OAuth token provided as part of the request.
 func (c *Client) GetCurrentAccount() (*GetAccountResponse, error) {
 
-	req, err := http.NewRequest("GET", GetCurrentAccountEndpoint, nil)
+	req, _ := http.NewRequest("GET", GetCurrentAccountEndpoint, nil)
 	req.Header.Add("Content-Type", "application/json")
 	c.AddAuthHeaders(req)
 
 	itemsResponse, err := c.Do(req)
-	itemsBytes, err := ioutil.ReadAll(itemsResponse.Body)
 	if err != nil {
 		fmt.Println("Failed to read the Items response from Bungie!: ", err.Error())
 		return nil, err
 	}
+	defer itemsResponse.Body.Close()
 
 	accountResponse := GetAccountResponse{}
-	json.Unmarshal(itemsBytes, &accountResponse)
+	json.NewDecoder(itemsResponse.Body).Decode(&accountResponse)
 
 	return &accountResponse, nil
 }
@@ -75,14 +75,14 @@ func (c *Client) GetUserItems(membershipType uint, membershipID string) (*ItemsE
 	req.Header.Add("Content-Type", "application/json")
 	c.AddAuthHeaders(req)
 
-	itemsResponse, _ := c.Client.Do(req)
-	itemsBytes, err := ioutil.ReadAll(itemsResponse.Body)
+	itemsResponse, err := c.Client.Do(req)
 	if err != nil {
 		return nil, err
 	}
+	defer itemsResponse.Body.Close()
 
 	itemsJSON := &ItemsEndpointResponse{}
-	json.Unmarshal(itemsBytes, itemsJSON)
+	json.NewDecoder(itemsResponse.Body).Decode(&itemsJSON)
 
 	return itemsJSON, nil
 }
@@ -93,7 +93,6 @@ func (c *Client) GetUserItems(membershipType uint, membershipID string) (*ItemsE
 func (c *Client) PostTransferItem(body map[string]interface{}) {
 
 	jsonBody, _ := json.Marshal(body)
-	fmt.Printf("Sending transfer request with body : %s\n", string(jsonBody))
 
 	req, _ := http.NewRequest("POST", TransferItemEndpointURL, strings.NewReader(string(jsonBody)))
 	req.Header.Add("Content-Type", "application/json")

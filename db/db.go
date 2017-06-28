@@ -5,10 +5,17 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/jinzhu/gorm"
+	"database/sql"
 
 	_ "github.com/lib/pq" // Only want to import the interface here
 )
+
+type LookupDB struct {
+	Database         *sql.DB
+	HashFromNameStmt *sql.Stmt
+}
+
+var db1 *LookupDB
 
 const (
 	// UnknownClassTable is the name of the table that will hold all the unknown class values provided by Alexa
@@ -17,19 +24,42 @@ const (
 	UnknownItemTable = "unknown_items"
 )
 
-// GetDBConnection is a helper for getting a connection to the DB based on
-// environment variables or some other method.
-func GetDBConnection() (*gorm.DB, error) {
+func InitDatabase() error {
 
-	//connStr := fmt.Sprintf("host=%s dbname=%s user=%s password=%s sslmode=%s",
-	//	host, name, user, pass, sslMode)
-	db, err := gorm.Open("postgres", os.Getenv("DATABASE_URL"))
+	db, err := sql.Open("postgres", os.Getenv("DATABASE_URL"))
 	if err != nil {
 		fmt.Println("DB errror: ", err.Error())
-		return nil, err
+		return err
 	}
 
-	return db, nil
+	stmt, err := db.Prepare("SELECT item_hash FROM items WHERE item_name = $1 AND item_type_name NOT IN ('Material Exchange', '') ORDER BY max_stack_size DESC LIMIT 1")
+	if err != nil {
+		fmt.Println("DB error: ", err.Error())
+		return err
+	}
+
+	db1 = &LookupDB{
+		Database:         db,
+		HashFromNameStmt: stmt,
+	}
+
+	return nil
+}
+
+// GetDBConnection is a helper for getting a connection to the DB based on
+// environment variables or some other method.
+func GetDBConnection() (*LookupDB, error) {
+
+	if db1 == nil {
+		fmt.Println("Initializing db!")
+		err := InitDatabase()
+		if err != nil {
+			fmt.Println("Failed to initialize the database: ", err.Error())
+			return nil, err
+		}
+	}
+
+	return db1, nil
 }
 
 // GetItemHashFromName is in charge of querying the database and reading
@@ -38,33 +68,20 @@ func GetItemHashFromName(itemName string) (uint, error) {
 
 	db, err := GetDBConnection()
 	if err != nil {
-		fmt.Println("Error trying to get connection to DB.")
 		return 0, err
 	}
-	defer db.Close()
 
-	rows, err := db.Table("items").
-		Select("item_hash").
-		Where("item_name = ? AND item_type_name NOT IN ('Material Exchange', '')", itemName).
-		Order("max_stack_size DESC").
-		Rows()
-
-	if err != nil {
-		fmt.Println("Failed to get item hash for name: ", itemName)
-		InsertUnknownValueIntoTable(itemName, UnknownItemTable)
-		return 0, errors.New("Item lookup failed")
-	}
+	row := db.HashFromNameStmt.QueryRow(itemName)
 
 	var hash uint
-	if rows.Next() {
-		rows.Scan(&hash)
-		fmt.Printf("Found hash for item %s: %d\n", itemName, hash)
-	}
+	err = row.Scan(&hash)
 
-	if hash == 0 {
+	if err == sql.ErrNoRows {
 		fmt.Println("Didn't find any transferrable items with that name: ", itemName)
 		InsertUnknownValueIntoTable(itemName, UnknownItemTable)
-		return 0, errors.New("No items founds")
+		return 0, errors.New("No items found")
+	} else if err != nil {
+		return 0, errors.New(err.Error())
 	}
 
 	return hash, nil
@@ -77,10 +94,8 @@ func InsertUnknownValueIntoTable(value, tableName string) {
 
 	conn, err := GetDBConnection()
 	if err != nil {
-		fmt.Println("Failed to get database connection inserting unknown value!")
 		return
 	}
-	defer conn.Close()
 
-	conn.Exec("INSERT INTO "+tableName+" (value) VALUES(?)", value)
+	conn.Database.Exec("INSERT INTO "+tableName+" (value) VALUES(?)", value)
 }

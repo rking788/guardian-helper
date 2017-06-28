@@ -2,9 +2,11 @@ package bungie
 
 // Constant API endpoints
 const (
+	//GetCurrentAccountEndpoint = "http://localhost:8000/account.json"
+	//ItemsEndpointFormat       = "http://localhost:8000/%d/%s/items.json"
 	GetCurrentAccountEndpoint         = "https://www.bungie.net/Platform/User/GetCurrentBungieAccount/"
-	MembershipIDFromDisplayNameFormat = "http://www.bungie.net/Platform/Destiny/SearchDestinyPlayer/%d/%s/"
 	ItemsEndpointFormat               = "http://www.bungie.net/Platform/Destiny/%d/Account/%s/Items"
+	MembershipIDFromDisplayNameFormat = "http://www.bungie.net/Platform/Destiny/SearchDestinyPlayer/%d/%s/"
 	TransferItemEndpointURL           = "https://www.bungie.net/Platform/Destiny/TransferItem/"
 )
 
