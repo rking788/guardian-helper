@@ -4,13 +4,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"sync"
 
-	"bitbucket.org/rking788/guardian-helper/db"
 	"github.com/mikeflynn/go-alexa/skillserver"
+	"github.com/rking788/guardian-helper/db"
 )
 
 // BaseResponse represents the data returned as part of all of the Bungie API
@@ -70,14 +69,12 @@ func MembershipIDFromDisplayName(displayName string) string {
 		return ""
 	}
 
-	membershipBytes, err := ioutil.ReadAll(membershipResponse.Body)
+	jsonResponse := MembershipIDLookUpResponse{}
+	err = json.NewDecoder(membershipResponse.Body).Decode(&jsonResponse)
 	if err != nil {
 		fmt.Println("Couldn't read the response body from the Bungie API!")
 		return ""
 	}
-
-	jsonResponse := MembershipIDLookUpResponse{}
-	json.Unmarshal(membershipBytes, &jsonResponse)
 
 	return jsonResponse.Response[0].MembershipID
 }
@@ -236,7 +233,7 @@ func transferItem(itemHash uint, itemSet []*Item, fullCharList []*Character, des
 
 		wg.Add(1)
 
-		go func(item *Item, charID string) {
+		go func(item *Item, charID string, wait *sync.WaitGroup) {
 			// These requests are all going TO the vault, the FROM the vault request
 			// will go later for all of these.
 			requestBody := map[string]interface{}{
@@ -251,8 +248,8 @@ func transferItem(itemHash uint, itemSet []*Item, fullCharList []*Character, des
 			fmt.Printf("Transferring item: %+v\n", item)
 			client.PostTransferItem(requestBody)
 
-			wg.Done()
-		}(item, fullCharList[item.CharacterIndex].CharacterBase.CharacterID)
+			wait.Done()
+		}(item, fullCharList[item.CharacterIndex].CharacterBase.CharacterID, &wg)
 
 		if count != -1 && totalCount >= uint(count) {
 			break

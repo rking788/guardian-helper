@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"time"
 
-	"bitbucket.org/rking788/guardian-helper/bungie"
+	"github.com/rking788/guardian-helper/bungie"
 
 	"strings"
 

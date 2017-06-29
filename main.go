@@ -5,7 +5,7 @@ import (
 	"net/http/httputil"
 	"os"
 
-	"bitbucket.org/rking788/guardian-helper/alexa"
+	"github.com/rking788/guardian-helper/alexa"
 
 	"github.com/gin-gonic/gin"
 	"github.com/mikeflynn/go-alexa/skillserver"
