@@ -49,7 +49,6 @@ func GetCurrentMap() (*skillserver.EchoResponse, error) {
 		fmt.Println("Error parsing trials report response: ", err.Error())
 		return nil, err
 	}
-	fmt.Printf("Current map response from Trials Report: %+v\n", currentMaps[0])
 	start, err := time.Parse("2006-01-02 15:04:05", currentMaps[0].StartDate)
 
 	response.OutputSpeech(fmt.Sprintf("According to Trials Report, the current Trials of Osiris map beginning %s %d is %s, goodluck Guardian.", start.Month().String(), start.Day(), currentMaps[0].Name))
@@ -62,7 +61,6 @@ func GetCurrentWeek(token string) (*skillserver.EchoResponse, error) {
 	response := skillserver.NewEchoResponse()
 
 	membershipID, err := findMembershipID(token)
-	fmt.Printf("Found membershipID: %s\n", membershipID)
 
 	url := fmt.Sprintf(TrialsCurrentWeekEndpointFmt, membershipID)
 	req, _ := http.NewRequest("GET", url, nil)
@@ -81,14 +79,13 @@ func GetCurrentWeek(token string) (*skillserver.EchoResponse, error) {
 		fmt.Println("Error parsing trials report response: ", err.Error())
 		return nil, err
 	}
-	fmt.Printf("Current week response from Trials Report: %+v\n", currentWeeks[0])
 
 	matches, _ := strconv.ParseInt(currentWeeks[0].Matches, 10, 32)
 	if matches != 0 {
 		losses, _ := strconv.ParseInt(currentWeeks[0].Losses, 10, 32)
 		wins := matches - losses
 		kd := currentWeeks[0].KD
-		response.OutputSpeech(fmt.Sprintf("So far you have played %d matches with %d wins, %d losses and a combined KD of %s", matches, wins, losses, kd))
+		response.OutputSpeech(fmt.Sprintf("So far you have played %d matches with %d wins, %d losses and a combined KD of %s, according to Trials Report", matches, wins, losses, kd))
 	} else {
 		response.OutputSpeech("You have not yet played any Trials of Osiris matches this week guardian.")
 	}
