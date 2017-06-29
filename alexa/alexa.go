@@ -212,7 +212,29 @@ func CurrentTrialsMap(request *skillserver.EchoRequest) (response *skillserver.E
 	response, err := trials.GetCurrentMap()
 	if err != nil {
 		response = skillserver.NewEchoResponse()
-		response.OutputSpeech("Sorry Guardian, I cannot access this information right now, try again later.")
+		response.OutputSpeech("Sorry Guardian, I cannot access this information right now, please try again later.")
+		return
+	}
+
+	return
+}
+
+// CurrentTrialsWeek will return a brief description of the current map in the active Trials of Osiris week.
+func CurrentTrialsWeek(request *skillserver.EchoRequest) (response *skillserver.EchoResponse) {
+
+	accessToken := request.Session.User.AccessToken
+	if accessToken == "" {
+		response = skillserver.NewEchoResponse()
+		response.
+			OutputSpeech("Sorry Guardian, it looks like your Bungie.net account needs to be linked in the Alexa app.").
+			LinkAccountCard()
+		return
+	}
+
+	response, err := trials.GetCurrentWeek(accessToken)
+	if err != nil {
+		response = skillserver.NewEchoResponse()
+		response.OutputSpeech("Sorry Guardian, I cannot access this information right now, please try again later.")
 		return
 	}
 
