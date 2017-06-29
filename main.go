@@ -50,12 +50,16 @@ func EchoIntentHandler(echoRequest *skillserver.EchoRequest, echoResponse *skill
 	session := alexa.GetSession(echoRequest.GetSessionID())
 	alexa.SaveSession(session)
 
+	intentName := echoRequest.GetIntentName()
+
 	if echoRequest.GetRequestType() == "LaunchRequest" {
 		response = alexa.WelcomePrompt(echoRequest)
 	} else if echoRequest.GetIntentName() == "CountItem" {
 		response = alexa.CountItem(echoRequest)
 	} else if echoRequest.GetIntentName() == "TransferItem" {
 		response = alexa.TransferItem(echoRequest)
+	} else if intentName == "TrialsCurrentMap" {
+		response = alexa.CurrentTrialsMap(echoRequest)
 	} else if echoRequest.GetIntentName() == "AMAZON.HelpIntent" {
 		response = alexa.HelpPrompt(echoRequest)
 	} else if echoRequest.GetIntentName() == "AMAZON.StopIntent" {

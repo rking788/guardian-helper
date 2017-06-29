@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/rking788/guardian-helper/bungie"
+	"github.com/rking788/guardian-helper/trials"
 
 	"strings"
 
@@ -195,6 +196,23 @@ func TransferItem(request *skillserver.EchoRequest) (response *skillserver.EchoR
 	if err != nil {
 		response = skillserver.NewEchoResponse()
 		response.OutputSpeech("Sorry Guardian, an error occurred trying to transfer that item.")
+		return
+	}
+
+	return
+}
+
+/*
+ * Trials of Osiris data
+ */
+
+// CurrentTrialsMap will return a brief description of the current map in the active Trials of Osiris week.
+func CurrentTrialsMap(request *skillserver.EchoRequest) (response *skillserver.EchoResponse) {
+
+	response, err := trials.GetCurrentMap()
+	if err != nil {
+		response = skillserver.NewEchoResponse()
+		response.OutputSpeech("Sorry Guardian, I cannot access this information right now, try again later.")
 		return
 	}
 
