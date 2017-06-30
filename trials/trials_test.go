@@ -1,6 +1,7 @@
 package trials
 
 import (
+	"fmt"
 	"testing"
 )
 
@@ -22,4 +23,14 @@ func TestCurrentWeek(t *testing.T) {
 		return
 	}
 	fmt.Printf("Response: %+v\n", response.Response.OutputSpeech.Text)*/
+}
+
+func TestWeaponPercentages(t *testing.T) {
+	response, err := GetWeaponUsagePercentages()
+	if err != nil {
+		fmt.Println("Error executing test: ", err.Error())
+		return
+	}
+
+	fmt.Printf("Response: %+v\n", response.Response.OutputSpeech.Text)
 }

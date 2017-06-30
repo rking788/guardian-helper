@@ -62,6 +62,8 @@ func EchoIntentHandler(echoRequest *skillserver.EchoRequest, echoResponse *skill
 		response = alexa.CurrentTrialsMap(echoRequest)
 	} else if intentName == "TrialsCurrentWeek" {
 		response = alexa.CurrentTrialsWeek(echoRequest)
+	} else if intentName == "TrialsTopWeapons" {
+		response = alexa.PopularWeapons(echoRequest)
 	} else if intentName == "AMAZON.HelpIntent" {
 		response = alexa.HelpPrompt(echoRequest)
 	} else if intentName == "AMAZON.StopIntent" {

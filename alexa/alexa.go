@@ -240,3 +240,16 @@ func CurrentTrialsWeek(request *skillserver.EchoRequest) (response *skillserver.
 
 	return
 }
+
+// PopularWeapons will check Trials Report for the most popular specific weapons for the current week.
+func PopularWeapons(request *skillserver.EchoRequest) (response *skillserver.EchoResponse) {
+
+	response, err := trials.GetWeaponUsagePercentages()
+	if err != nil {
+		response = skillserver.NewEchoResponse()
+		response.OutputSpeech("Sorry Guardian, I cannot access this information at this time, please try again later")
+		return
+	}
+
+	return
+}

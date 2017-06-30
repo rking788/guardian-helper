@@ -9,5 +9,8 @@ const (
 	TrialsTopWeaponsEndpointFmt   = TrialsBaseURL + "/topWeapons/%s"
 	TrialsGetOpponentsEndpointFmt = TrialsBaseURL + "/getOpponents/%s"
 	// Week Number
-	TrialsWeaponPercentageEndpointFmt = TrialsBaseURL + "/leaderboard/percentage/%d"
+	TrialsWeaponPercentageEndpointFmt = TrialsBaseURL + "/leaderboard/percentage/%s"
+
+	// How many weapons to return in the Alexa response describing usage stats
+	TopWeaponUsageLimit = 3
 )
