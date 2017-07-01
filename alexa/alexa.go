@@ -1,5 +1,8 @@
 package alexa
 
+// TODO: This file really needs a refactor. Endpoints that require a linked account
+// should use some kind of middleware instead of having the check in individually handlers.
+
 import (
 	"encoding/json"
 	"fmt"
@@ -245,6 +248,28 @@ func CurrentTrialsWeek(request *skillserver.EchoRequest) (response *skillserver.
 func PopularWeapons(request *skillserver.EchoRequest) (response *skillserver.EchoResponse) {
 
 	response, err := trials.GetWeaponUsagePercentages()
+	if err != nil {
+		response = skillserver.NewEchoResponse()
+		response.OutputSpeech("Sorry Guardian, I cannot access this information at this time, please try again later")
+		return
+	}
+
+	return
+}
+
+// PersonalTopWeapons will check Trials Report for the most used weapons for the current user.
+func PersonalTopWeapons(request *skillserver.EchoRequest) (response *skillserver.EchoResponse) {
+
+	accessToken := request.Session.User.AccessToken
+	if accessToken == "" {
+		response = skillserver.NewEchoResponse()
+		response.
+			OutputSpeech("Sorry Guardian, it looks like your Bungie.net account needs to be linked in the Alexa app.").
+			LinkAccountCard()
+		return
+	}
+
+	response, err := trials.GetPersonalTopWeapons(accessToken)
 	if err != nil {
 		response = skillserver.NewEchoResponse()
 		response.OutputSpeech("Sorry Guardian, I cannot access this information at this time, please try again later")

@@ -15,6 +15,7 @@ import (
 
 	"github.com/mikeflynn/go-alexa/skillserver"
 	"github.com/rking788/guardian-helper/bungie"
+	"github.com/rking788/guardian-helper/db"
 )
 
 // CurrentMap represents the metadata describing the current active map in Trials of Osiris
@@ -31,11 +32,20 @@ type CurrentWeek struct {
 	KD      string `json:"kd"`
 }
 
+// WeaponUsage is used in the response from the weapon percentage endpoint. It describes the popularity
+// of a specific weapon (not type).
 type WeaponUsage struct {
 	Name           string `json:"name"`
 	BucketTypeHash string `json:"bucketTypeHash"`
 	Percentage     string `json:"percentage"`
 	Tier           string `json:"tier"`
+}
+
+type PersonalWeaponStats struct {
+	Headshots    int    `json:"headshots"`
+	TotalMatches int    `json:"total_matches"`
+	Kills        int    `json:"kills"`
+	WeaponID     string `json:"weaponId"`
 }
 
 // GetCurrentMap will make a request to the Trials Report API endpoint and
@@ -160,11 +170,61 @@ func GetWeaponUsagePercentages() (*skillserver.EchoResponse, error) {
 	err = json.NewDecoder(weaponResponse.Body).Decode(&usages)
 
 	buffer := bytes.NewBufferString("According to Trials Report, the top weapons used in trials this week are: ")
+	// TODO: Maybe it would be good to have the user specify the number of top weapons they want returned.
 	for i := 0; i < TopWeaponUsageLimit; i++ {
 		usagePercent, _ := strconv.ParseFloat(usages[i].Percentage, 64)
 		buffer.WriteString(fmt.Sprintf("%s with %.1f%%, ", usages[i].Name, usagePercent))
 	}
 
 	response.OutputSpeech(buffer.String())
+	return response, nil
+}
+
+// GetPersonalTopWeapons will return a summary of the top weapons used by the linked player/account.
+func GetPersonalTopWeapons(token string) (*skillserver.EchoResponse, error) {
+	response := skillserver.NewEchoResponse()
+
+	membershipID, err := findMembershipID(token)
+	if err != nil {
+		fmt.Println("Error loading membership ID for linked account: ", err.Error())
+		return nil, err
+	}
+
+	url := fmt.Sprintf(TrialsTopWeaponsEndpointFmt, membershipID)
+	req, _ := http.NewRequest("GET", url, nil)
+	req.Header.Add("Content-Type", "application/json")
+
+	topWeaponsResponse, err := http.DefaultClient.Do(req)
+	if err != nil {
+		fmt.Println("Error sending weapon percentages request to Trial Report: ", err.Error())
+		return nil, err
+	}
+	defer topWeaponsResponse.Body.Close()
+
+	usages := make([]PersonalWeaponStats, 0, 10)
+	err = json.NewDecoder(topWeaponsResponse.Body).Decode(&usages)
+
+	if len(usages) <= 0 {
+		response.OutputSpeech("You have no top used weapons in Trials of Osiris")
+		return response, nil
+	}
+
+	buffer := bytes.NewBufferString("According to Trials Report, your top weapons by kills are: ")
+	for index, usage := range usages {
+
+		if index >= TopWeaponUsageLimit {
+			break
+		}
+
+		name, err := db.GetItemNameFromHash(usage.WeaponID)
+		if err != nil {
+			name = "Unknown"
+		}
+
+		buffer.WriteString(fmt.Sprintf("%s, ", name))
+	}
+
+	response.OutputSpeech(buffer.String())
+
 	return response, nil
 }
