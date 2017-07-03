@@ -30,6 +30,12 @@
       ],
       "intent": "TransferItem"
     },
+	{
+		"intent": "TrialsCurrentMap"
+	},
+	{
+		"intent": "TrialsCurrentWeek"
+	},
     {
         "intent": "AMAZON.HelpIntent"
     },
