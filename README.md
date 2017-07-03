@@ -5,4 +5,4 @@ Guardian Helper is an Alexa skill that allows players of the game Destiny (guard
 
 - Counting items in inventory
 - Transferring items between characters including the vault
-
+- Retrieve stats from [Trials Report](https://trials.report) [(Github)](https://github.com/DestinyTrialsReport/DestinyTrialsReport)

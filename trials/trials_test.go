@@ -43,3 +43,13 @@ func TestPersonalTopeWeaponPercentages(t *testing.T) {
 
 	fmt.Printf("Response: %+v\n", response.Response.OutputSpeech.Text)*/
 }
+
+func TestPopularWeaponTypes(t *testing.T) {
+	/*response, err := GetPopularWeaponTypes()
+	if err != nil {
+		fmt.Println("Error running popular weapon types test: ", err.Error())
+		return
+	}
+
+	fmt.Printf("Response: %+v\n", response.Response.OutputSpeech.Text)*/
+}

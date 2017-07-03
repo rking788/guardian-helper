@@ -52,6 +52,8 @@ func EchoIntentHandler(echoRequest *skillserver.EchoRequest, echoResponse *skill
 
 	intentName := echoRequest.GetIntentName()
 
+	fmt.Printf("Launching with RequestType: %s, IntentName: %s\n", echoRequest.GetRequestType(), intentName)
+
 	if echoRequest.GetRequestType() == "LaunchRequest" {
 		response = alexa.WelcomePrompt(echoRequest)
 	} else if intentName == "CountItem" {
@@ -66,6 +68,8 @@ func EchoIntentHandler(echoRequest *skillserver.EchoRequest, echoResponse *skill
 		response = alexa.PopularWeapons(echoRequest)
 	} else if intentName == "TrialsPersonalTopWeapons" {
 		response = alexa.PersonalTopWeapons(echoRequest)
+	} else if intentName == "TrialsPopularWeaponTypes" {
+		response = alexa.PopularWeaponTypes()
 	} else if intentName == "AMAZON.HelpIntent" {
 		response = alexa.HelpPrompt(echoRequest)
 	} else if intentName == "AMAZON.StopIntent" {

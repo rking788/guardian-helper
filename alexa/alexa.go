@@ -105,8 +105,8 @@ func ClearSession(sessionID string) {
 func WelcomePrompt(echoRequest *skillserver.EchoRequest) (response *skillserver.EchoResponse) {
 	response = skillserver.NewEchoResponse()
 
-	response.OutputSpeech("Welcome Guardian, would you like to transfer an item to a specific character or find out how many of an item you have?").
-		Reprompt("Do you want to transfer an item or find out how much of an item you have?").
+	response.OutputSpeech("Welcome Guardian, would you like to transfer an item to a specific character, find out how many of an item you have, or ask about Trials of Osiris?").
+		Reprompt("Do you want to transfer an item, find out how much of an item you have, or ask about Trials of Osiris?").
 		EndSession(false)
 
 	return
@@ -119,7 +119,7 @@ func HelpPrompt(echoRequest *skillserver.EchoRequest) (response *skillserver.Ech
 
 	response.OutputSpeech("Welcome Guardian, I am here to help manage your Destiny in-game inventory. You can ask " +
 		"me to transfer items between any of your available characters including the vault. You can also ask how many of an " +
-		"item you have.").
+		"item you have. Trials of Osiris statistics provided by Trials Report are available too.").
 		EndSession(false)
 
 	return
@@ -273,6 +273,20 @@ func PersonalTopWeapons(request *skillserver.EchoRequest) (response *skillserver
 	if err != nil {
 		response = skillserver.NewEchoResponse()
 		response.OutputSpeech("Sorry Guardian, I cannot access this information at this time, please try again later")
+		return
+	}
+
+	return
+}
+
+// PopularWeaponTypes will return info about what classes of weapons are getting
+// the most kills in Trials of Osiris.
+func PopularWeaponTypes() (response *skillserver.EchoResponse) {
+	response, err := trials.GetPopularWeaponTypes()
+
+	if err != nil {
+		response = skillserver.NewEchoResponse()
+		response.OutputSpeech("Sorry Guardian, I cannot access this information at this time, pleast try again later")
 		return
 	}
 
