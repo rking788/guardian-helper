@@ -19,6 +19,11 @@ import (
 	"github.com/rking788/guardian-helper/db"
 )
 
+const (
+	// RequestOrigin will be used in the Origin header when making requests to Trials Report
+	RequestOrigin = "https://guardian-helper.herokuapp.com"
+)
+
 // CurrentMap represents the metadata describing the current active map in Trials of Osiris
 type CurrentMap struct {
 	Name       string `json:"activityName"`
@@ -96,6 +101,7 @@ func GetCurrentMap() (*skillserver.EchoResponse, error) {
 func requestCurrentMap() (*CurrentMap, error) {
 	req, _ := http.NewRequest("GET", TrialsCurrentMapEndpoint, nil)
 	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("Origin", RequestOrigin)
 
 	mapResponse, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -123,6 +129,7 @@ func GetCurrentWeek(token string) (*skillserver.EchoResponse, error) {
 	url := fmt.Sprintf(TrialsCurrentWeekEndpointFmt, membershipID)
 	req, _ := http.NewRequest("GET", url, nil)
 	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("Origin", RequestOrigin)
 
 	mapResponse, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -183,6 +190,7 @@ func GetWeaponUsagePercentages() (*skillserver.EchoResponse, error) {
 	url := fmt.Sprintf(TrialsWeaponPercentageEndpointFmt, currentMap.WeekNumber)
 	req, _ := http.NewRequest("GET", url, nil)
 	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("Origin", RequestOrigin)
 
 	weaponResponse, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -218,6 +226,7 @@ func GetPersonalTopWeapons(token string) (*skillserver.EchoResponse, error) {
 	url := fmt.Sprintf(TrialsTopWeaponsEndpointFmt, membershipID)
 	req, _ := http.NewRequest("GET", url, nil)
 	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("Origin", RequestOrigin)
 
 	topWeaponsResponse, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -262,6 +271,7 @@ func GetPopularWeaponTypes() (*skillserver.EchoResponse, error) {
 
 	req, _ := http.NewRequest("GET", TrialsCurrentWeekStatsEndpoint, nil)
 	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("Origin", RequestOrigin)
 
 	weekResponse, err := http.DefaultClient.Do(req)
 	if err != nil {
