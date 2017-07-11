@@ -1,5 +1,8 @@
 package alexa
 
+// TODO: This file really needs a refactor. Endpoints that require a linked account
+// should use some kind of middleware instead of having the check in individually handlers.
+
 import (
 	"encoding/json"
 	"fmt"
@@ -7,7 +10,8 @@ import (
 	"strconv"
 	"time"
 
-	"bitbucket.org/rking788/guardian-helper/bungie"
+	"github.com/rking788/guardian-helper/bungie"
+	"github.com/rking788/guardian-helper/trials"
 
 	"strings"
 
@@ -101,8 +105,8 @@ func ClearSession(sessionID string) {
 func WelcomePrompt(echoRequest *skillserver.EchoRequest) (response *skillserver.EchoResponse) {
 	response = skillserver.NewEchoResponse()
 
-	response.OutputSpeech("Welcome Guardian, would you like to transfer an item to a specific character or find out how many of an item you have?").
-		Reprompt("Do you want to transfer an item or find out how much of an item you have?").
+	response.OutputSpeech("Welcome Guardian, would you like to transfer an item to a specific character, find out how many of an item you have, or ask about Trials of Osiris?").
+		Reprompt("Do you want to transfer an item, find out how much of an item you have, or ask about Trials of Osiris?").
 		EndSession(false)
 
 	return
@@ -115,7 +119,7 @@ func HelpPrompt(echoRequest *skillserver.EchoRequest) (response *skillserver.Ech
 
 	response.OutputSpeech("Welcome Guardian, I am here to help manage your Destiny in-game inventory. You can ask " +
 		"me to transfer items between any of your available characters including the vault. You can also ask how many of an " +
-		"item you have.").
+		"item you have. Trials of Osiris statistics provided by Trials Report are available too.").
 		EndSession(false)
 
 	return
@@ -195,6 +199,94 @@ func TransferItem(request *skillserver.EchoRequest) (response *skillserver.EchoR
 	if err != nil {
 		response = skillserver.NewEchoResponse()
 		response.OutputSpeech("Sorry Guardian, an error occurred trying to transfer that item.")
+		return
+	}
+
+	return
+}
+
+/*
+ * Trials of Osiris data
+ */
+
+// CurrentTrialsMap will return a brief description of the current map in the active Trials of Osiris week.
+func CurrentTrialsMap(request *skillserver.EchoRequest) (response *skillserver.EchoResponse) {
+
+	response, err := trials.GetCurrentMap()
+	if err != nil {
+		response = skillserver.NewEchoResponse()
+		response.OutputSpeech("Sorry Guardian, I cannot access this information right now, please try again later.")
+		return
+	}
+
+	return
+}
+
+// CurrentTrialsWeek will return a brief description of the current map in the active Trials of Osiris week.
+func CurrentTrialsWeek(request *skillserver.EchoRequest) (response *skillserver.EchoResponse) {
+
+	accessToken := request.Session.User.AccessToken
+	if accessToken == "" {
+		response = skillserver.NewEchoResponse()
+		response.
+			OutputSpeech("Sorry Guardian, it looks like your Bungie.net account needs to be linked in the Alexa app.").
+			LinkAccountCard()
+		return
+	}
+
+	response, err := trials.GetCurrentWeek(accessToken)
+	if err != nil {
+		response = skillserver.NewEchoResponse()
+		response.OutputSpeech("Sorry Guardian, I cannot access this information right now, please try again later.")
+		return
+	}
+
+	return
+}
+
+// PopularWeapons will check Trials Report for the most popular specific weapons for the current week.
+func PopularWeapons(request *skillserver.EchoRequest) (response *skillserver.EchoResponse) {
+
+	response, err := trials.GetWeaponUsagePercentages()
+	if err != nil {
+		response = skillserver.NewEchoResponse()
+		response.OutputSpeech("Sorry Guardian, I cannot access this information at this time, please try again later")
+		return
+	}
+
+	return
+}
+
+// PersonalTopWeapons will check Trials Report for the most used weapons for the current user.
+func PersonalTopWeapons(request *skillserver.EchoRequest) (response *skillserver.EchoResponse) {
+
+	accessToken := request.Session.User.AccessToken
+	if accessToken == "" {
+		response = skillserver.NewEchoResponse()
+		response.
+			OutputSpeech("Sorry Guardian, it looks like your Bungie.net account needs to be linked in the Alexa app.").
+			LinkAccountCard()
+		return
+	}
+
+	response, err := trials.GetPersonalTopWeapons(accessToken)
+	if err != nil {
+		response = skillserver.NewEchoResponse()
+		response.OutputSpeech("Sorry Guardian, I cannot access this information at this time, please try again later")
+		return
+	}
+
+	return
+}
+
+// PopularWeaponTypes will return info about what classes of weapons are getting
+// the most kills in Trials of Osiris.
+func PopularWeaponTypes() (response *skillserver.EchoResponse) {
+	response, err := trials.GetPopularWeaponTypes()
+
+	if err != nil {
+		response = skillserver.NewEchoResponse()
+		response.OutputSpeech("Sorry Guardian, I cannot access this information at this time, pleast try again later")
 		return
 	}
 

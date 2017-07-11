@@ -6,10 +6,6 @@
 	"ignore": "test",
 	"package": [
 		{
-			"path": "bitbucket.org/rking788/guardian-helper",
-			"revision": ""
-		},
-		{
 			"checksumSHA1": "NQWrITjQCpJdsRzaPQIsfClTF6M=",
 			"path": "github.com/codegangsta/negroni",
 			"revision": "1d8981a52d6bda4467a9faacf3fdddd38222dfc4",
@@ -130,5 +126,5 @@
 			"revisionTime": "2017-02-08T14:18:51Z"
 		}
 	],
-	"rootPath": "bitbucket.org/rking788/guardian-helper"
+	"rootPath": "github.com/rking788/guardian-helper"
 }

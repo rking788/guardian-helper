@@ -13,6 +13,7 @@ import (
 type LookupDB struct {
 	Database         *sql.DB
 	HashFromNameStmt *sql.Stmt
+	NameFromHashStmt *sql.Stmt
 }
 
 var db1 *LookupDB
@@ -24,6 +25,8 @@ const (
 	UnknownItemTable = "unknown_items"
 )
 
+// InitDatabase is in charge of preparing any Statements that will be commonly used as well
+// as setting up the database connection pool.
 func InitDatabase() error {
 
 	db, err := sql.Open("postgres", os.Getenv("DATABASE_URL"))
@@ -37,10 +40,16 @@ func InitDatabase() error {
 		fmt.Println("DB error: ", err.Error())
 		return err
 	}
+	nameFromHashStmt, err := db.Prepare("SELECT item_name FROM items WHERE item_hash = $1 LIMIT 1")
+	if err != nil {
+		fmt.Println("DB prepare error: ", err.Error())
+		return err
+	}
 
 	db1 = &LookupDB{
 		Database:         db,
 		HashFromNameStmt: stmt,
+		NameFromHashStmt: nameFromHashStmt,
 	}
 
 	return nil
@@ -85,6 +94,30 @@ func GetItemHashFromName(itemName string) (uint, error) {
 	}
 
 	return hash, nil
+}
+
+// GetItemNameFromHash is in charge of querying the database and reading
+// the item name value for the given item hash.
+func GetItemNameFromHash(itemHash string) (string, error) {
+
+	db, err := GetDBConnection()
+	if err != nil {
+		return "", err
+	}
+
+	row := db.NameFromHashStmt.QueryRow(itemHash)
+
+	var name string
+	err = row.Scan(&name)
+
+	if err == sql.ErrNoRows {
+		fmt.Println("Didn't find any transferrable items with that hash: ", itemHash)
+		return "", errors.New("No items found")
+	} else if err != nil {
+		return "", errors.New(err.Error())
+	}
+
+	return name, nil
 }
 
 // InsertUnknownValueIntoTable is a helper method for inserting a value into the specified table.

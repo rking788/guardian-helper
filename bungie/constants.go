@@ -8,6 +8,7 @@ const (
 	ItemsEndpointFormat               = "http://www.bungie.net/Platform/Destiny/%d/Account/%s/Items"
 	MembershipIDFromDisplayNameFormat = "http://www.bungie.net/Platform/Destiny/SearchDestinyPlayer/%d/%s/"
 	TransferItemEndpointURL           = "https://www.bungie.net/Platform/Destiny/TransferItem/"
+	TrialsCurrentEndpoint             = "https://api.destinytrialsreport.com/currentMap"
 )
 
 // Hash values for different class types 'classHash' JSON key

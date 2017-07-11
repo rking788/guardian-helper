@@ -5,7 +5,7 @@ import (
 	"net/http/httputil"
 	"os"
 
-	"bitbucket.org/rking788/guardian-helper/alexa"
+	"github.com/rking788/guardian-helper/alexa"
 
 	"github.com/gin-gonic/gin"
 	"github.com/mikeflynn/go-alexa/skillserver"
@@ -50,17 +50,31 @@ func EchoIntentHandler(echoRequest *skillserver.EchoRequest, echoResponse *skill
 	session := alexa.GetSession(echoRequest.GetSessionID())
 	alexa.SaveSession(session)
 
+	intentName := echoRequest.GetIntentName()
+
+	fmt.Printf("Launching with RequestType: %s, IntentName: %s\n", echoRequest.GetRequestType(), intentName)
+
 	if echoRequest.GetRequestType() == "LaunchRequest" {
 		response = alexa.WelcomePrompt(echoRequest)
-	} else if echoRequest.GetIntentName() == "CountItem" {
+	} else if intentName == "CountItem" {
 		response = alexa.CountItem(echoRequest)
-	} else if echoRequest.GetIntentName() == "TransferItem" {
+	} else if intentName == "TransferItem" {
 		response = alexa.TransferItem(echoRequest)
-	} else if echoRequest.GetIntentName() == "AMAZON.HelpIntent" {
+	} else if intentName == "TrialsCurrentMap" {
+		response = alexa.CurrentTrialsMap(echoRequest)
+	} else if intentName == "TrialsCurrentWeek" {
+		response = alexa.CurrentTrialsWeek(echoRequest)
+	} else if intentName == "TrialsTopWeapons" {
+		response = alexa.PopularWeapons(echoRequest)
+	} else if intentName == "TrialsPersonalTopWeapons" {
+		response = alexa.PersonalTopWeapons(echoRequest)
+	} else if intentName == "TrialsPopularWeaponTypes" {
+		response = alexa.PopularWeaponTypes()
+	} else if intentName == "AMAZON.HelpIntent" {
 		response = alexa.HelpPrompt(echoRequest)
-	} else if echoRequest.GetIntentName() == "AMAZON.StopIntent" {
+	} else if intentName == "AMAZON.StopIntent" {
 		response = skillserver.NewEchoResponse()
-	} else if echoRequest.GetIntentName() == "AMAZON.CancelIntent" {
+	} else if intentName == "AMAZON.CancelIntent" {
 		response = skillserver.NewEchoResponse()
 	} else {
 		response = skillserver.NewEchoResponse()
