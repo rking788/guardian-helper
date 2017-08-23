@@ -32,13 +32,11 @@ type BaseResponse struct {
 // this information needs to be used in all of the character/user specific endpoints.
 type GetAccountResponse struct {
 	Response *struct {
-		DestinyAccounts []*struct {
-			UserInfo *struct {
-				MembershipType uint   `json:"membershipType"`
-				DisplayName    string `json:"displayName"`
-				MembershipID   string `json:"membershipId"`
-			} `json:"userInfo"`
-		} `json:"destinyAccounts"`
+		DestinyMemberships []*struct {
+			MembershipType uint   `json:"membershipType"`
+			DisplayName    string `json:"displayName"`
+			MembershipID   string `json:"membershipId"`
+		} `json:"destinyMemberships"`
 	} `json:"Response"`
 	Base *BaseResponse
 }
@@ -212,7 +210,7 @@ func TransferItem(itemName, accessToken, sourceClass, destinationClass string, c
 	}
 
 	actualQuantity := transferItem(matchingItems, allChars, destCharacter,
-		itemsJSON.GetAccountResponse.Response.DestinyAccounts[0].UserInfo.MembershipType,
+		itemsJSON.GetAccountResponse.Response.DestinyMemberships[0].MembershipType,
 		count, client)
 
 	var output string
@@ -259,7 +257,7 @@ func UnloadEngrams(accessToken string) (*skillserver.EchoResponse, error) {
 	allChars := itemsJSON.ItemsEndpointResponse.Response.Data.Characters
 
 	_ = transferItem(matchingItems, allChars, nil,
-		itemsJSON.GetAccountResponse.Response.DestinyAccounts[0].UserInfo.MembershipType,
+		itemsJSON.GetAccountResponse.Response.DestinyMemberships[0].MembershipType,
 		-1, client)
 
 	var output string
@@ -385,9 +383,9 @@ func GetAllItemsForCurrentUser(client *Client, responseChan chan *AllItemsMsg) {
 
 	// TODO: Figure out how to support multiple accounts, meaning PSN and XBOX,
 	// maybe require it to be specified in the Alexa voice command.
-	userInfo := currentAccount.Response.DestinyAccounts[0].UserInfo
+	membership := currentAccount.Response.DestinyMemberships[0]
 
-	items, err := client.GetUserItems(userInfo.MembershipType, userInfo.MembershipID)
+	items, err := client.GetUserItems(membership.MembershipType, membership.MembershipID)
 	if err != nil {
 		fmt.Println("Failed to read the Items response from Bungie!: ", err.Error())
 		responseChan <- &AllItemsMsg{

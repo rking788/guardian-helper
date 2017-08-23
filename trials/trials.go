@@ -167,13 +167,13 @@ func findMembershipID(token string) (string, error) {
 	if err != nil {
 		fmt.Println("Error loading current account info from Bungie.net: ", err.Error())
 		return "", err
-	} else if currentAccount.Response == nil || currentAccount.Response.DestinyAccounts == nil ||
-		len(currentAccount.Response.DestinyAccounts) == 0 {
+	} else if currentAccount.Response == nil || currentAccount.Response.DestinyMemberships == nil ||
+		len(currentAccount.Response.DestinyMemberships) == 0 {
 		return "", errors.New("No linked Destiny account found on Bungie.net")
 	}
 
 	// TODO: This should take the platform into account instead of just defaulting to the first one.
-	return currentAccount.Response.DestinyAccounts[0].UserInfo.MembershipID, nil
+	return currentAccount.Response.DestinyMemberships[0].MembershipID, nil
 }
 
 // GetWeaponUsagePercentages will return a response describing the top 3 used weapons
