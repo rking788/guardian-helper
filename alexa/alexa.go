@@ -205,6 +205,29 @@ func TransferItem(request *skillserver.EchoRequest) (response *skillserver.EchoR
 	return
 }
 
+// UnloadEngrams will take all engrams on all of the current user's characters and transfer them all to the
+// vault to allow the player to continue farming.
+func UnloadEngrams(request *skillserver.EchoRequest) (response *skillserver.EchoResponse) {
+
+	accessToken := request.Session.User.AccessToken
+	if accessToken == "" {
+		response = skillserver.NewEchoResponse()
+		response.
+			OutputSpeech("Sorry Guardian, it looks like your Bungie.net account needs to be linked in the Alexa app.").
+			LinkAccountCard()
+		return
+	}
+
+	response, err := bungie.UnloadEngrams(accessToken)
+	if err != nil {
+		fmt.Println("Error occurred unloading engrams: ", err.Error())
+		response = skillserver.NewEchoResponse()
+		response.OutputSpeech("Sorry Guardian, an error occurred moving your engrams.")
+	}
+
+	return
+}
+
 /*
  * Trials of Osiris data
  */

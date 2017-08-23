@@ -14,6 +14,7 @@ type LookupDB struct {
 	Database         *sql.DB
 	HashFromNameStmt *sql.Stmt
 	NameFromHashStmt *sql.Stmt
+	EngramHashStmt   *sql.Stmt
 }
 
 var db1 *LookupDB
@@ -46,10 +47,18 @@ func InitDatabase() error {
 		return err
 	}
 
+	// 8 is the item_type value for engrams
+	engramHashStmt, err := db.Prepare("SELECT item_hash FROM items WHERE item_name LIKE '%engram%'")
+	if err != nil {
+		fmt.Println("DB prepare error: ", err.Error())
+		return err
+	}
+
 	db1 = &LookupDB{
 		Database:         db,
 		HashFromNameStmt: stmt,
 		NameFromHashStmt: nameFromHashStmt,
+		EngramHashStmt:   engramHashStmt,
 	}
 
 	return nil
@@ -69,6 +78,31 @@ func GetDBConnection() (*LookupDB, error) {
 	}
 
 	return db1, nil
+}
+
+// FindEngramHashes is responsible for querying all of the item_hash values that represent engrams
+// and returning them in a map for quick lookup later.
+func FindEngramHashes() (map[uint]bool, error) {
+
+	result := make(map[uint]bool)
+
+	db, err := GetDBConnection()
+	if err != nil {
+		return nil, err
+	}
+
+	rows, err := db.EngramHashStmt.Query()
+	if err != nil {
+		return nil, err
+	}
+
+	for rows.Next() {
+		var hash uint
+		rows.Scan(&hash)
+		result[hash] = true
+	}
+
+	return result, nil
 }
 
 // GetItemHashFromName is in charge of querying the database and reading

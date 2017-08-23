@@ -7,9 +7,15 @@ import (
 	"net/http"
 	"os"
 	"sync"
+	"time"
 
 	"github.com/mikeflynn/go-alexa/skillserver"
 	"github.com/rking788/guardian-helper/db"
+)
+
+const (
+	// TransferDelay will be the artificial between transfer requests to try and avoid throttling
+	TransferDelay = 750 * time.Millisecond
 )
 
 // BaseResponse represents the data returned as part of all of the Bungie API
@@ -50,6 +56,25 @@ type MembershipIDLookUpResponse struct {
 // MembershipData represents the Response portion of the membership ID lookup
 type MembershipData struct {
 	MembershipID string `json:"membershipId"`
+}
+
+var engramHashes map[uint]bool
+
+// PopulateEngramHashes will intialize the map holding all item_hash values that represent engram types.
+func PopulateEngramHashes() error {
+
+	var err error
+	engramHashes, err = db.FindEngramHashes()
+	if err != nil {
+		fmt.Println("Error populating engram item_hash values: ", err.Error())
+		return err
+	} else if len(engramHashes) <= 0 {
+		fmt.Println("Didn't find any engram item hashes in the database.")
+		return errors.New("No engram item_hash values found")
+	}
+
+	fmt.Printf("Loaded %d hashes representing engrams into the map.\n", len(engramHashes))
+	return nil
 }
 
 // MembershipIDFromDisplayName is responsible for retrieving the Destiny
@@ -111,7 +136,7 @@ func CountItem(itemName, accessToken string) (*skillserver.EchoResponse, error) 
 		return response, nil
 	}
 	itemsData := itemsJSON.ItemsEndpointResponse.Response.Data
-	matchingItems := itemsData.findItemsMatchingHash(hash)
+	matchingItems := itemsData.Items.FilterItems(itemHashFilter, hash)
 	fmt.Printf("Found %d items entries in characters inventory.\n", len(matchingItems))
 
 	if len(matchingItems) == 0 {
@@ -166,7 +191,7 @@ func TransferItem(itemName, accessToken, sourceClass, destinationClass string, c
 	}
 
 	itemsData := itemsJSON.ItemsEndpointResponse.Response.Data
-	matchingItems := itemsData.findItemsMatchingHash(hash)
+	matchingItems := itemsData.Items.FilterItems(itemHashFilter, hash)
 	fmt.Printf("Found %d items entries in characters inventory.\n", len(matchingItems))
 
 	if len(matchingItems) == 0 {
@@ -186,7 +211,7 @@ func TransferItem(itemName, accessToken, sourceClass, destinationClass string, c
 		return response, nil
 	}
 
-	actualQuantity := transferItem(hash, matchingItems, allChars, destCharacter,
+	actualQuantity := transferItem(matchingItems, allChars, destCharacter,
 		itemsJSON.GetAccountResponse.Response.DestinyAccounts[0].UserInfo.MembershipType,
 		count, client)
 
@@ -202,7 +227,53 @@ func TransferItem(itemName, accessToken, sourceClass, destinationClass string, c
 	return response, nil
 }
 
-func transferItem(itemHash uint, itemSet []*Item, fullCharList []*Character, destCharacter *Character, membershipType uint, count int, client *Client) uint {
+// UnloadEngrams is responsible for transferring all engrams off of a character and
+func UnloadEngrams(accessToken string) (*skillserver.EchoResponse, error) {
+	response := skillserver.NewEchoResponse()
+
+	client := NewClient(accessToken, os.Getenv("BUNGIE_API_KEY"))
+
+	itemsChannel := make(chan *AllItemsMsg)
+	go GetAllItemsForCurrentUser(client, itemsChannel)
+
+	itemsJSON := <-itemsChannel
+	if itemsJSON.error != nil {
+		fmt.Println("Failed to read the Items response from Bungie!: ", itemsJSON.error.Error())
+		return nil, itemsJSON.error
+	}
+
+	matchingItems := itemsJSON.ItemsEndpointResponse.Response.Data.Items.FilterItems(itemIsEngramFilter, true)
+	if len(matchingItems) == 0 {
+		outputStr := fmt.Sprintf("You don't have any engrams on your current character. Happy farming Guardian!")
+		response.OutputSpeech(outputStr)
+		return response, nil
+	}
+
+	foundCount := uint(0)
+	for _, item := range matchingItems {
+		foundCount += item.Quantity
+	}
+
+	fmt.Printf("Found %d engrams on all characters\n", foundCount)
+
+	allChars := itemsJSON.ItemsEndpointResponse.Response.Data.Characters
+
+	_ = transferItem(matchingItems, allChars, nil,
+		itemsJSON.GetAccountResponse.Response.DestinyAccounts[0].UserInfo.MembershipType,
+		-1, client)
+
+	var output string
+	output = fmt.Sprintf("All set Guardian, your engrams have been transferred to your vault. Happy farming Guardian")
+
+	response.OutputSpeech(output)
+
+	return response, nil
+}
+
+// transferItem is a generic transfer method that will handle a full transfer of a specific item to the specified
+// character. This requires a full trip from the source, to the vault, and then to the destination character.
+// By providing a nil destCharacter, the items will be transferred to the vault and left there.
+func transferItem(itemSet []*Item, fullCharList []*Character, destCharacter *Character, membershipType uint, count int, client *Client) uint {
 
 	// TODO: This should probably take the transferStatus field into account,
 	// if the item is NotTransferrable, don't bother trying.
@@ -226,54 +297,61 @@ func transferItem(itemHash uint, itemSet []*Item, fullCharList []*Character, des
 		}
 		totalCount += numToTransfer
 
-		// If these items are already in the vault, skip it they will be transferred later
-		if item.CharacterIndex == -1 {
-			continue
-		}
-
 		wg.Add(1)
 
-		go func(item *Item, charID string, wait *sync.WaitGroup) {
-			// These requests are all going TO the vault, the FROM the vault request
-			// will go later for all of these.
-			requestBody := map[string]interface{}{
-				"itemReferenceHash": itemHash,
+		// TODO: There is an issue were we are getting throttling responses from the Bungie
+		// servers. There will be an extra delay added here to try and avoid the throttling.
+		go func(item *Item, characters []*Character, wait *sync.WaitGroup) {
+
+			defer wg.Done()
+
+			// If these items are already in the vault, skip it they will be transferred later
+			if item.CharacterIndex != -1 {
+				// These requests are all going TO the vault, the FROM the vault request
+				// will go later for all of these.
+				requestBody := map[string]interface{}{
+					"itemReferenceHash": item.ItemHash,
+					"stackSize":         numToTransfer,
+					"transferToVault":   true,
+					"itemId":            item.ItemID,
+					"characterId":       characters[item.CharacterIndex].CharacterBase.CharacterID,
+					"membershipType":    membershipType,
+				}
+
+				fmt.Printf("Transferring item: %+v\n", item)
+				client.PostTransferItem(requestBody)
+				time.Sleep(TransferDelay)
+			}
+
+			// TODO: This could possibly be handled more efficiently if we know the items are uniform,
+			// meaning they all have the same itemHash values, for example (all motes of light or all strange coins)
+			// It is trickier for instances like engrams where each engram type has a different item hash.
+			// Now transfer all of these items from the vault to the destination character
+			if destCharacter == nil {
+				// If the destination is the vault... then we are done already
+				return
+			}
+
+			vaultToCharRequestBody := map[string]interface{}{
+				"itemReferenceHash": item.ItemHash,
 				"stackSize":         numToTransfer,
-				"transferToVault":   true,
-				"itemId":            item.ItemID,
-				"characterId":       charID,
+				"transferToVault":   false,
+				"itemId":            0,
+				"characterId":       destCharacter.CharacterBase.CharacterID,
 				"membershipType":    membershipType,
 			}
 
-			fmt.Printf("Transferring item: %+v\n", item)
-			client.PostTransferItem(requestBody)
+			client.PostTransferItem(vaultToCharRequestBody)
+			time.Sleep(TransferDelay)
 
-			wait.Done()
-		}(item, fullCharList[item.CharacterIndex].CharacterBase.CharacterID, &wg)
+		}(item, fullCharList, &wg)
 
 		if count != -1 && totalCount >= uint(count) {
 			break
 		}
 	}
 
-	// Now transfer all of these items from the vault to the destination character
-	if destCharacter == nil {
-		// If the destination is the vault... then we are done already
-		return totalCount
-	}
-
 	wg.Wait()
-
-	requestBody := map[string]interface{}{
-		"itemReferenceHash": itemHash,
-		"stackSize":         totalCount,
-		"transferToVault":   false,
-		"itemId":            0,
-		"characterId":       destCharacter.CharacterBase.CharacterID,
-		"membershipType":    membershipType,
-	}
-
-	client.PostTransferItem(requestBody)
 
 	return totalCount
 }

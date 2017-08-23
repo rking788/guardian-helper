@@ -5,10 +5,20 @@ const (
 	//GetCurrentAccountEndpoint = "http://localhost:8000/account.json"
 	//ItemsEndpointFormat       = "http://localhost:8000/%d/%s/items.json"
 	GetCurrentAccountEndpoint         = "https://www.bungie.net/Platform/User/GetCurrentBungieAccount/"
-	ItemsEndpointFormat               = "http://www.bungie.net/Platform/Destiny/%d/Account/%s/Items"
-	MembershipIDFromDisplayNameFormat = "http://www.bungie.net/Platform/Destiny/SearchDestinyPlayer/%d/%s/"
-	TransferItemEndpointURL           = "https://www.bungie.net/Platform/Destiny/TransferItem/"
+	ItemsEndpointFormat               = "https://www.bungie.net/d1/Platform/Destiny/%d/Account/%s/Items"
+	MembershipIDFromDisplayNameFormat = "https://www.bungie.net/d1/Platform/Destiny/SearchDestinyPlayer/%d/%s/"
+	TransferItemEndpointURL           = "https://www.bungie.net/d1/Platform/Destiny/TransferItem/"
 	TrialsCurrentEndpoint             = "https://api.destinytrialsreport.com/currentMap"
+)
+
+const (
+	UnknownTier  = 0
+	CurrencyTier = 1
+	BasicTier    = 2
+	CommonTier   = 3
+	RareTier     = 4
+	SuperiorTier = 5
+	ExoticTier   = 6
 )
 
 // Hash values for different class types 'classHash' JSON key

@@ -5,6 +5,8 @@ import (
 	"net/http/httputil"
 	"os"
 
+	"github.com/rking788/guardian-helper/bungie"
+
 	"github.com/rking788/guardian-helper/alexa"
 
 	"github.com/gin-gonic/gin"
@@ -26,6 +28,11 @@ var (
 func main() {
 
 	port := os.Getenv("PORT")
+
+	err := bungie.PopulateEngramHashes()
+	if err != nil {
+		return
+	}
 
 	fmt.Println(fmt.Sprintf("Start listening on port(%s)", port))
 	skillserver.Run(Applications, port)
@@ -70,6 +77,8 @@ func EchoIntentHandler(echoRequest *skillserver.EchoRequest, echoResponse *skill
 		response = alexa.PersonalTopWeapons(echoRequest)
 	} else if intentName == "TrialsPopularWeaponTypes" {
 		response = alexa.PopularWeaponTypes()
+	} else if intentName == "UnloadEngrams" {
+		response = alexa.UnloadEngrams(echoRequest)
 	} else if intentName == "AMAZON.HelpIntent" {
 		response = alexa.HelpPrompt(echoRequest)
 	} else if intentName == "AMAZON.StopIntent" {
