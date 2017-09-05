@@ -100,13 +100,33 @@ func ClearSession(sessionID string) {
 	}
 }
 
+// Handler is the type of function that should be used to respond to a specific intent.
+type Handler func(*skillserver.EchoRequest) *skillserver.EchoResponse
+
+func AuthWrapper(handler Handler) Handler {
+
+	return func(req *skillserver.EchoRequest) *skillserver.EchoResponse {
+		accessToken := req.Session.User.AccessToken
+		if accessToken == "" {
+			response := skillserver.NewEchoResponse()
+			response.
+				OutputSpeech("Sorry Guardian, it looks like your Bungie.net account needs to be linked in the Alexa app.").
+				LinkAccountCard()
+			return response
+		}
+
+		return handler(req)
+	}
+}
+
 // WelcomePrompt is responsible for prompting the user with information about what they can ask
 // the skill to do.
 func WelcomePrompt(echoRequest *skillserver.EchoRequest) (response *skillserver.EchoResponse) {
 	response = skillserver.NewEchoResponse()
 
-	response.OutputSpeech("Welcome Guardian, would you like to transfer an item to a specific character, find out how many of an item you have, or ask about Trials of Osiris?").
-		Reprompt("Do you want to transfer an item, find out how much of an item you have, or ask about Trials of Osiris?").
+	response.OutputSpeech("Welcome Guardian, would you like to equip max light, unload engrams, or transfer an item to a specific character, " +
+		"find out how many of an item you have, or ask about Trials of Osiris?").
+		Reprompt("Do you want to equip max light, unload engrams, transfer an item, find out how much of an item you have, or ask about Trials of Osiris?").
 		EndSession(false)
 
 	return
@@ -118,7 +138,8 @@ func HelpPrompt(echoRequest *skillserver.EchoRequest) (response *skillserver.Ech
 	response = skillserver.NewEchoResponse()
 
 	response.OutputSpeech("Welcome Guardian, I am here to help manage your Destiny in-game inventory. You can ask " +
-		"me to transfer items between any of your available characters including the vault. You can also ask how many of an " +
+		"me to equip your max light loadout, unload engrams from your inventory, or transfer items between your available " +
+		"characters including the vault. You can also ask how many of an " +
 		"item you have. Trials of Osiris statistics provided by Trials Report are available too.").
 		EndSession(false)
 
@@ -130,14 +151,6 @@ func HelpPrompt(echoRequest *skillserver.EchoRequest) (response *skillserver.Ech
 func CountItem(echoRequest *skillserver.EchoRequest) (response *skillserver.EchoResponse) {
 
 	accessToken := echoRequest.Session.User.AccessToken
-	if accessToken == "" {
-		response = skillserver.NewEchoResponse()
-		response.
-			OutputSpeech("Sorry Guardian, it looks like your Bungie.net account needs to be linked in the Alexa app.").
-			LinkAccountCard()
-		return
-	}
-
 	item, _ := echoRequest.GetSlotValue("Item")
 	lowerItem := strings.ToLower(item)
 	response, err := bungie.CountItem(lowerItem, accessToken)
@@ -156,14 +169,6 @@ func CountItem(echoRequest *skillserver.EchoRequest) (response *skillserver.Echo
 func TransferItem(request *skillserver.EchoRequest) (response *skillserver.EchoResponse) {
 
 	accessToken := request.Session.User.AccessToken
-	if accessToken == "" {
-		response = skillserver.NewEchoResponse()
-		response.
-			OutputSpeech("Sorry Guardian, it looks like your Bungie.net account needs to be linked in the Alexa app.").
-			LinkAccountCard()
-		return
-	}
-
 	countStr, _ := request.GetSlotValue("Count")
 	count := -1
 	if countStr != "" {
@@ -205,6 +210,34 @@ func TransferItem(request *skillserver.EchoRequest) (response *skillserver.EchoR
 	return
 }
 
+func MaxLight(request *skillserver.EchoRequest) (response *skillserver.EchoResponse) {
+
+	accessToken := request.Session.User.AccessToken
+	response, err := bungie.EquipMaxLightGear(accessToken)
+	if err != nil {
+		fmt.Println("Error occurred equipping max light: ", err.Error())
+		response = skillserver.NewEchoResponse()
+		response.OutputSpeech("Sorry Guardian, an error occurred equipping your max light gear.")
+	}
+
+	return
+}
+
+// UnloadEngrams will take all engrams on all of the current user's characters and transfer them all to the
+// vault to allow the player to continue farming.
+func UnloadEngrams(request *skillserver.EchoRequest) (response *skillserver.EchoResponse) {
+
+	accessToken := request.Session.User.AccessToken
+	response, err := bungie.UnloadEngrams(accessToken)
+	if err != nil {
+		fmt.Println("Error occurred unloading engrams: ", err.Error())
+		response = skillserver.NewEchoResponse()
+		response.OutputSpeech("Sorry Guardian, an error occurred moving your engrams.")
+	}
+
+	return
+}
+
 /*
  * Trials of Osiris data
  */
@@ -226,14 +259,6 @@ func CurrentTrialsMap(request *skillserver.EchoRequest) (response *skillserver.E
 func CurrentTrialsWeek(request *skillserver.EchoRequest) (response *skillserver.EchoResponse) {
 
 	accessToken := request.Session.User.AccessToken
-	if accessToken == "" {
-		response = skillserver.NewEchoResponse()
-		response.
-			OutputSpeech("Sorry Guardian, it looks like your Bungie.net account needs to be linked in the Alexa app.").
-			LinkAccountCard()
-		return
-	}
-
 	response, err := trials.GetCurrentWeek(accessToken)
 	if err != nil {
 		response = skillserver.NewEchoResponse()
@@ -261,14 +286,6 @@ func PopularWeapons(request *skillserver.EchoRequest) (response *skillserver.Ech
 func PersonalTopWeapons(request *skillserver.EchoRequest) (response *skillserver.EchoResponse) {
 
 	accessToken := request.Session.User.AccessToken
-	if accessToken == "" {
-		response = skillserver.NewEchoResponse()
-		response.
-			OutputSpeech("Sorry Guardian, it looks like your Bungie.net account needs to be linked in the Alexa app.").
-			LinkAccountCard()
-		return
-	}
-
 	response, err := trials.GetPersonalTopWeapons(accessToken)
 	if err != nil {
 		response = skillserver.NewEchoResponse()
@@ -281,9 +298,9 @@ func PersonalTopWeapons(request *skillserver.EchoRequest) (response *skillserver
 
 // PopularWeaponTypes will return info about what classes of weapons are getting
 // the most kills in Trials of Osiris.
-func PopularWeaponTypes() (response *skillserver.EchoResponse) {
-	response, err := trials.GetPopularWeaponTypes()
+func PopularWeaponTypes(echoRequest *skillserver.EchoRequest) (response *skillserver.EchoResponse) {
 
+	response, err := trials.GetPopularWeaponTypes()
 	if err != nil {
 		response = skillserver.NewEchoResponse()
 		response.OutputSpeech("Sorry Guardian, I cannot access this information at this time, pleast try again later")

@@ -3,9 +3,9 @@ package bungie
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"strings"
+	"time"
 )
 
 // Client is a type that contains all information needed to make requests to the
@@ -92,17 +92,72 @@ func (c *Client) GetUserItems(membershipType uint, membershipID string) (*ItemsE
 // or the vault.
 func (c *Client) PostTransferItem(body map[string]interface{}) {
 
-	jsonBody, _ := json.Marshal(body)
+	// TODO: This retry logic should probably be added to a middleware type function
+	retry := true
+	attempts := 0
+	for {
+		retry = false
+		jsonBody, _ := json.Marshal(body)
 
-	req, _ := http.NewRequest("POST", TransferItemEndpointURL, strings.NewReader(string(jsonBody)))
-	req.Header.Add("Content-Type", "application/json")
-	c.AddAuthHeaders(req)
+		req, _ := http.NewRequest("POST", TransferItemEndpointURL, strings.NewReader(string(jsonBody)))
+		req.Header.Add("Content-Type", "application/json")
+		c.AddAuthHeaders(req)
 
-	resp, err := c.Do(req)
-	if err != nil {
-		return
+		resp, err := c.Do(req)
+		if err != nil {
+			fmt.Println("Error transferring item: ", err.Error())
+			return
+		}
+		defer resp.Body.Close()
+
+		var response BaseResponse
+		json.NewDecoder(resp.Body).Decode(&response)
+		if response.ErrorCode == 36 || response.ErrorStatus == "ThrottleLimitExceededMomentarily" {
+			time.Sleep(1 * time.Second)
+			retry = true
+		}
+
+		fmt.Printf("Response for transfer request: %+v\n", response)
+		attempts++
+		if retry == false || attempts >= 5 {
+			break
+		}
 	}
+}
 
-	respBytes, _ := ioutil.ReadAll(resp.Body)
-	fmt.Printf("Response for transfer request: %s\n", string(respBytes))
+// PostEquipItem is responsible for calling the Bungie.net API to equip
+// an item on a specific character.
+func (c *Client) PostEquipItem(body map[string]interface{}) {
+
+	// TODO: This retry logic should probably be added to a middleware type function
+	retry := true
+	attempts := 0
+	for {
+		retry = false
+		jsonBody, _ := json.Marshal(body)
+
+		req, _ := http.NewRequest("POST", EquipItemEndpointURL, strings.NewReader(string(jsonBody)))
+		req.Header.Add("Content-Type", "application/json")
+		c.AddAuthHeaders(req)
+
+		resp, err := c.Do(req)
+		if err != nil {
+			fmt.Println("Error equipping item: ", err.Error())
+			return
+		}
+		defer resp.Body.Close()
+
+		var response BaseResponse
+		json.NewDecoder(resp.Body).Decode(&response)
+		if response.ErrorCode == 36 || response.ErrorStatus == "ThrottleLimitExceededMomentarily" {
+			time.Sleep(1 * time.Second)
+			retry = true
+		}
+
+		fmt.Printf("Response for equip request: %+v\n", response)
+		attempts++
+		if retry == false || attempts >= 5 {
+			break
+		}
+	}
 }

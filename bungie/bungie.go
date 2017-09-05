@@ -4,12 +4,20 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
+	"net"
 	"net/http"
 	"os"
 	"sync"
+	"time"
 
 	"github.com/mikeflynn/go-alexa/skillserver"
 	"github.com/rking788/guardian-helper/db"
+)
+
+const (
+	// TransferDelay will be the artificial between transfer requests to try and avoid throttling
+	TransferDelay = 750 * time.Millisecond
 )
 
 // BaseResponse represents the data returned as part of all of the Bungie API
@@ -26,13 +34,11 @@ type BaseResponse struct {
 // this information needs to be used in all of the character/user specific endpoints.
 type GetAccountResponse struct {
 	Response *struct {
-		DestinyAccounts []*struct {
-			UserInfo *struct {
-				MembershipType uint   `json:"membershipType"`
-				DisplayName    string `json:"displayName"`
-				MembershipID   string `json:"membershipId"`
-			} `json:"userInfo"`
-		} `json:"destinyAccounts"`
+		DestinyMemberships []*struct {
+			MembershipType uint   `json:"membershipType"`
+			DisplayName    string `json:"displayName"`
+			MembershipID   string `json:"membershipId"`
+		} `json:"destinyMemberships"`
 	} `json:"Response"`
 	Base *BaseResponse
 }
@@ -50,6 +56,121 @@ type MembershipIDLookUpResponse struct {
 // MembershipData represents the Response portion of the membership ID lookup
 type MembershipData struct {
 	MembershipID string `json:"membershipId"`
+}
+
+var engramHashes map[uint]bool
+var itemMetadata map[uint]*ItemMetadata
+
+// EquipmentBucket is the type of the key for the bucket type hash lookup
+type EquipmentBucket uint
+
+func (bucket EquipmentBucket) String() string {
+	switch bucket {
+	case Primary:
+		return "Primary"
+	case Special:
+		return "Special"
+	case Heavy:
+		return "Heavy"
+	case Ghost:
+		return "Ghost"
+	case Helmet:
+		return "Helmet"
+	case Arms:
+		return "Arms"
+	case Chest:
+		return "Chest"
+	case Legs:
+		return "Legs"
+	case ClassArmor:
+		return "ClassArmor"
+	case Artifact:
+		return "Artifact"
+	}
+
+	return ""
+}
+
+// Equipment bucket type definitions
+const (
+	Primary EquipmentBucket = iota
+	Special
+	Heavy
+	Ghost
+	Helmet
+	Arms
+	Chest
+	Legs
+	ClassArmor
+	Artifact
+)
+
+var bucketHashLookup map[EquipmentBucket]uint
+
+// PopulateEngramHashes will intialize the map holding all item_hash values that represent engram types.
+func PopulateEngramHashes() error {
+
+	var err error
+	engramHashes, err = db.FindEngramHashes()
+	if err != nil {
+		fmt.Println("Error populating engram item_hash values: ", err.Error())
+		return err
+	} else if len(engramHashes) <= 0 {
+		fmt.Println("Didn't find any engram item hashes in the database.")
+		return errors.New("No engram item_hash values found")
+	}
+
+	fmt.Printf("Loaded %d hashes representing engrams into the map.\n", len(engramHashes))
+	return nil
+}
+
+// PopulateItemMetadata is responsible for loading all of the metadata fields that need
+// to be loaded into memory for common inventory related operations.
+func PopulateItemMetadata() error {
+
+	rows, err := db.LoadItemMetadata()
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	itemMetadata = make(map[uint]*ItemMetadata)
+	for rows.Next() {
+		var hash uint
+		itemMeta := ItemMetadata{}
+		rows.Scan(&hash, &itemMeta.TierType, &itemMeta.ClassType)
+
+		itemMetadata[hash] = &itemMeta
+	}
+	if rows.Err() != nil {
+		return rows.Err()
+	}
+	fmt.Printf("Loaded %d item metadata entries\n", len(itemMetadata))
+
+	return nil
+}
+
+// PopulateBucketHashLookup will fill the map that will be used to lookup bucket type hashes
+// which will be used to determine which type of equipment a specific Item represents.
+func PopulateBucketHashLookup() error {
+
+	// TODO: This absolutely needs to be done dynamically from the manifest. Not from a static definition
+	//var err error
+	bucketHashLookup = make(map[EquipmentBucket]uint)
+
+	bucketHashLookup[Primary] = 1498876634
+	bucketHashLookup[Special] = 2465295065
+	bucketHashLookup[Heavy] = 953998645
+	bucketHashLookup[Ghost] = 4023194814
+
+	bucketHashLookup[Helmet] = 3448274439
+	bucketHashLookup[Arms] = 3551918588
+	bucketHashLookup[Chest] = 14239492
+	bucketHashLookup[Legs] = 20886954
+	bucketHashLookup[Artifact] = 434908299
+	bucketHashLookup[ClassArmor] = 1585787867
+
+	return nil
 }
 
 // MembershipIDFromDisplayName is responsible for retrieving the Destiny
@@ -111,7 +232,7 @@ func CountItem(itemName, accessToken string) (*skillserver.EchoResponse, error) 
 		return response, nil
 	}
 	itemsData := itemsJSON.ItemsEndpointResponse.Response.Data
-	matchingItems := itemsData.findItemsMatchingHash(hash)
+	matchingItems := itemsData.Items.FilterItems(itemHashFilter, hash)
 	fmt.Printf("Found %d items entries in characters inventory.\n", len(matchingItems))
 
 	if len(matchingItems) == 0 {
@@ -166,7 +287,7 @@ func TransferItem(itemName, accessToken, sourceClass, destinationClass string, c
 	}
 
 	itemsData := itemsJSON.ItemsEndpointResponse.Response.Data
-	matchingItems := itemsData.findItemsMatchingHash(hash)
+	matchingItems := itemsData.Items.FilterItems(itemHashFilter, hash)
 	fmt.Printf("Found %d items entries in characters inventory.\n", len(matchingItems))
 
 	if len(matchingItems) == 0 {
@@ -186,8 +307,8 @@ func TransferItem(itemName, accessToken, sourceClass, destinationClass string, c
 		return response, nil
 	}
 
-	actualQuantity := transferItem(hash, matchingItems, allChars, destCharacter,
-		itemsJSON.GetAccountResponse.Response.DestinyAccounts[0].UserInfo.MembershipType,
+	actualQuantity := transferItem(matchingItems, allChars, destCharacter,
+		itemsJSON.GetAccountResponse.Response.DestinyMemberships[0].MembershipType,
 		count, client)
 
 	var output string
@@ -202,7 +323,101 @@ func TransferItem(itemName, accessToken, sourceClass, destinationClass string, c
 	return response, nil
 }
 
-func transferItem(itemHash uint, itemSet []*Item, fullCharList []*Character, destCharacter *Character, membershipType uint, count int, client *Client) uint {
+// EquipMaxLightGear will equip all items that are required to have the maximum light on a character
+func EquipMaxLightGear(accessToken string) (*skillserver.EchoResponse, error) {
+	response := skillserver.NewEchoResponse()
+
+	client := NewClient(accessToken, os.Getenv("BUNGIE_API_KEY"))
+
+	itemsChannel := make(chan *AllItemsMsg)
+	go GetAllItemsForCurrentUser(client, itemsChannel)
+
+	itemsJSON := <-itemsChannel
+	if itemsJSON.error != nil {
+		fmt.Println("Failed to read the Items response from Bungie!: ", itemsJSON.error.Error())
+		return nil, itemsJSON.error
+	}
+
+	// Transfer to the most recent character on the most recent platform
+	destinationIndex := 0
+	membershipType := itemsJSON.GetAccountResponse.Response.DestinyMemberships[0].MembershipType
+
+	loadout := findMaxLightLoadout(itemsJSON.ItemsEndpointResponse, destinationIndex)
+
+	fmt.Printf("Found loadout to equip: %v\n", loadout)
+	fmt.Printf("Calculated light for loadout: %f\n", loadout.calculateLightLevel())
+
+	err := equipLoadout(loadout, destinationIndex, itemsJSON.ItemsEndpointResponse, membershipType, client)
+	if err != nil {
+		fmt.Println("Failed to equip the specified loadout: ", err.Error())
+		return nil, err
+	}
+
+	characterClass := itemsJSON.ItemsEndpointResponse.Response.Data.characterClassNameAtIndex(0)
+	response.OutputSpeech(fmt.Sprintf("Max light equipped to your %s Guardian. You are a force to be wreckoned with.", characterClass))
+	return response, nil
+}
+
+// UnloadEngrams is responsible for transferring all engrams off of a character and
+func UnloadEngrams(accessToken string) (*skillserver.EchoResponse, error) {
+	response := skillserver.NewEchoResponse()
+
+	client := NewClient(accessToken, os.Getenv("BUNGIE_API_KEY"))
+
+	itemsChannel := make(chan *AllItemsMsg)
+	go GetAllItemsForCurrentUser(client, itemsChannel)
+
+	itemsJSON := <-itemsChannel
+	if itemsJSON.error != nil {
+		fmt.Println("Failed to read the Items response from Bungie!: ", itemsJSON.error.Error())
+		return nil, itemsJSON.error
+	}
+
+	matchingItems := itemsJSON.ItemsEndpointResponse.Response.Data.Items.FilterItems(itemIsEngramFilter, true)
+	if len(matchingItems) == 0 {
+		outputStr := fmt.Sprintf("You don't have any engrams on your current character. Happy farming Guardian!")
+		response.OutputSpeech(outputStr)
+		return response, nil
+	}
+
+	foundCount := uint(0)
+	for _, item := range matchingItems {
+		foundCount += item.Quantity
+	}
+
+	fmt.Printf("Found %d engrams on all characters\n", foundCount)
+
+	allChars := itemsJSON.ItemsEndpointResponse.Response.Data.Characters
+
+	_ = transferItem(matchingItems, allChars, nil,
+		itemsJSON.GetAccountResponse.Response.DestinyMemberships[0].MembershipType,
+		-1, client)
+
+	var output string
+	output = fmt.Sprintf("All set Guardian, your engrams have been transferred to your vault. Happy farming Guardian")
+
+	response.OutputSpeech(output)
+
+	return response, nil
+}
+
+// GetOutboundIP gets preferred outbound ip of this machine
+func GetOutboundIP() net.IP {
+	conn, err := net.Dial("udp", "8.8.8.8:80")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer conn.Close()
+
+	localAddr := conn.LocalAddr().(*net.UDPAddr)
+
+	return localAddr.IP
+}
+
+// transferItem is a generic transfer method that will handle a full transfer of a specific item to the specified
+// character. This requires a full trip from the source, to the vault, and then to the destination character.
+// By providing a nil destCharacter, the items will be transferred to the vault and left there.
+func transferItem(itemSet []*Item, fullCharList []*Character, destCharacter *Character, membershipType uint, count int, client *Client) uint {
 
 	// TODO: This should probably take the transferStatus field into account,
 	// if the item is NotTransferrable, don't bother trying.
@@ -212,7 +427,6 @@ func transferItem(itemHash uint, itemSet []*Item, fullCharList []*Character, des
 	for _, item := range itemSet {
 
 		if item.CharacterIndex != -1 && fullCharList[item.CharacterIndex] == destCharacter {
-			fmt.Println("Attempting to transfer items to the same character... skipping")
 			continue
 		}
 
@@ -226,56 +440,107 @@ func transferItem(itemHash uint, itemSet []*Item, fullCharList []*Character, des
 		}
 		totalCount += numToTransfer
 
-		// If these items are already in the vault, skip it they will be transferred later
-		if item.CharacterIndex == -1 {
-			continue
-		}
-
 		wg.Add(1)
 
-		go func(item *Item, charID string, wait *sync.WaitGroup) {
-			// These requests are all going TO the vault, the FROM the vault request
-			// will go later for all of these.
-			requestBody := map[string]interface{}{
-				"itemReferenceHash": itemHash,
+		// TODO: There is an issue were we are getting throttling responses from the Bungie
+		// servers. There will be an extra delay added here to try and avoid the throttling.
+		go func(item *Item, characters []*Character, wait *sync.WaitGroup) {
+
+			defer wg.Done()
+
+			fmt.Printf("Transferring item: %+v\n", item)
+
+			// If these items are already in the vault, skip it they will be transferred later
+			if item.CharacterIndex != -1 {
+				// These requests are all going TO the vault, the FROM the vault request
+				// will go later for all of these.
+				requestBody := map[string]interface{}{
+					"itemReferenceHash": item.ItemHash,
+					"stackSize":         numToTransfer,
+					"transferToVault":   true,
+					"itemId":            item.ItemID,
+					"characterId":       characters[item.CharacterIndex].CharacterBase.CharacterID,
+					"membershipType":    membershipType,
+				}
+
+				client.PostTransferItem(requestBody)
+				time.Sleep(TransferDelay)
+			}
+
+			// TODO: This could possibly be handled more efficiently if we know the items are uniform,
+			// meaning they all have the same itemHash values, for example (all motes of light or all strange coins)
+			// It is trickier for instances like engrams where each engram type has a different item hash.
+			// Now transfer all of these items from the vault to the destination character
+			if destCharacter == nil {
+				// If the destination is the vault... then we are done already
+				return
+			}
+
+			vaultToCharRequestBody := map[string]interface{}{
+				"itemReferenceHash": item.ItemHash,
 				"stackSize":         numToTransfer,
-				"transferToVault":   true,
+				"transferToVault":   false,
 				"itemId":            item.ItemID,
-				"characterId":       charID,
+				"characterId":       destCharacter.CharacterBase.CharacterID,
 				"membershipType":    membershipType,
 			}
 
-			fmt.Printf("Transferring item: %+v\n", item)
-			client.PostTransferItem(requestBody)
+			client.PostTransferItem(vaultToCharRequestBody)
+			time.Sleep(TransferDelay)
 
-			wait.Done()
-		}(item, fullCharList[item.CharacterIndex].CharacterBase.CharacterID, &wg)
+		}(item, fullCharList, &wg)
 
 		if count != -1 && totalCount >= uint(count) {
 			break
 		}
 	}
 
-	// Now transfer all of these items from the vault to the destination character
-	if destCharacter == nil {
-		// If the destination is the vault... then we are done already
-		return totalCount
+	wg.Wait()
+
+	return totalCount
+}
+
+// equipItems is a generic equip method that will handle a equipping a specific item on a specific character.
+func equipItems(itemSet []*Item, characterIndex int, characters []*Character, membershipType uint, client *Client) {
+
+	var wg sync.WaitGroup
+
+	for _, item := range itemSet {
+
+		if item.TransferStatus == ItemIsEquipped && item.CharacterIndex == characterIndex {
+			// If this item is already equipped, skip it.
+			continue
+		}
+
+		wg.Add(1)
+
+		// TODO: There is an issue were we are getting throttling responses from the Bungie
+		// servers. There will be an extra delay added here to try and avoid the throttling.
+		go func(item *Item, character *Character, membershipType uint, wait *sync.WaitGroup) {
+
+			defer wg.Done()
+			equipItem(item, character, membershipType, client)
+
+		}(item, characters[characterIndex], membershipType, &wg)
 	}
 
 	wg.Wait()
+}
 
-	requestBody := map[string]interface{}{
-		"itemReferenceHash": itemHash,
-		"stackSize":         totalCount,
-		"transferToVault":   false,
-		"itemId":            0,
-		"characterId":       destCharacter.CharacterBase.CharacterID,
-		"membershipType":    membershipType,
+// TODO: All of these equip/transfer/etc. action should take a single struct with all the parameters required
+// to perform the action, as well as probably a *Client reference.
+
+// equipItem will take the specified item and equip it on the provided character
+func equipItem(item *Item, character *Character, membershipType uint, client *Client) {
+	fmt.Printf("Equipping item(%d)...\n", item.ItemHash)
+
+	equipRequestBody := map[string]interface{}{
+		"itemId":         item.ItemID,
+		"characterId":    character.CharacterBase.CharacterID,
+		"membershipType": membershipType,
 	}
 
-	client.PostTransferItem(requestBody)
-
-	return totalCount
+	client.PostEquipItem(equipRequestBody)
 }
 
 // AllItemsMsg is a type used by channels that need to communicate back from a
@@ -307,9 +572,9 @@ func GetAllItemsForCurrentUser(client *Client, responseChan chan *AllItemsMsg) {
 
 	// TODO: Figure out how to support multiple accounts, meaning PSN and XBOX,
 	// maybe require it to be specified in the Alexa voice command.
-	userInfo := currentAccount.Response.DestinyAccounts[0].UserInfo
+	membership := currentAccount.Response.DestinyMemberships[0]
 
-	items, err := client.GetUserItems(userInfo.MembershipType, userInfo.MembershipID)
+	items, err := client.GetUserItems(membership.MembershipType, membership.MembershipID)
 	if err != nil {
 		fmt.Println("Failed to read the Items response from Bungie!: ", err.Error())
 		responseChan <- &AllItemsMsg{
@@ -318,6 +583,10 @@ func GetAllItemsForCurrentUser(client *Client, responseChan chan *AllItemsMsg) {
 			error:                 errors.New("Failed to read current user's items: " + err.Error()),
 		}
 		return
+	}
+
+	for _, char := range items.Response.Data.Characters {
+		fmt.Printf("Found character(%s) with last played date: %+v\n", classHashToName[char.CharacterBase.ClassHash], char.CharacterBase.DateLastPlayed)
 	}
 
 	responseChan <- &AllItemsMsg{
