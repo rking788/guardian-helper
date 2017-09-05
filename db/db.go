@@ -14,6 +14,8 @@ type LookupDB struct {
 	Database         *sql.DB
 	HashFromNameStmt *sql.Stmt
 	NameFromHashStmt *sql.Stmt
+	EngramHashStmt   *sql.Stmt
+	ItemMetadataStmt *sql.Stmt
 }
 
 var db1 *LookupDB
@@ -46,10 +48,25 @@ func InitDatabase() error {
 		return err
 	}
 
+	// 8 is the item_type value for engrams
+	engramHashStmt, err := db.Prepare("SELECT item_hash FROM items WHERE item_name LIKE '%engram%'")
+	if err != nil {
+		fmt.Println("DB prepare error: ", err.Error())
+		return err
+	}
+
+	itemMetadataStmt, err := db.Prepare("SELECT item_hash, tier_type, class_type FROM items")
+	if err != nil {
+		fmt.Println("DB error: ", err.Error())
+		return err
+	}
+
 	db1 = &LookupDB{
 		Database:         db,
 		HashFromNameStmt: stmt,
 		NameFromHashStmt: nameFromHashStmt,
+		EngramHashStmt:   engramHashStmt,
+		ItemMetadataStmt: itemMetadataStmt,
 	}
 
 	return nil
@@ -69,6 +86,48 @@ func GetDBConnection() (*LookupDB, error) {
 	}
 
 	return db1, nil
+}
+
+// FindEngramHashes is responsible for querying all of the item_hash values that represent engrams
+// and returning them in a map for quick lookup later.
+func FindEngramHashes() (map[uint]bool, error) {
+
+	result := make(map[uint]bool)
+
+	db, err := GetDBConnection()
+	if err != nil {
+		return nil, err
+	}
+
+	rows, err := db.EngramHashStmt.Query()
+	if err != nil {
+		return nil, err
+	}
+
+	for rows.Next() {
+		var hash uint
+		rows.Scan(&hash)
+		result[hash] = true
+	}
+
+	return result, nil
+}
+
+// LoadItemMetadata will load all rows from the database for all items loaded out of the manifest.
+// Only the required columns will be loaded into memory that need to be used later for common operations.
+func LoadItemMetadata() (*sql.Rows, error) {
+
+	db, err := GetDBConnection()
+	if err != nil {
+		return nil, err
+	}
+
+	rows, err := db.ItemMetadataStmt.Query()
+	if err != nil {
+		return nil, err
+	}
+
+	return rows, nil
 }
 
 // GetItemHashFromName is in charge of querying the database and reading
