@@ -28,7 +28,23 @@ type CharacterBase struct {
 	ClassType              uint      `json:"ClassType"`
 }
 
-func findDestinationCharacter(characters []*Character, class string) (*Character, error) {
+// CharacterList represents a slice of Character pointers.
+type CharacterList []*Character
+
+// LastPlayedSort specifies a specific type for CharacterList that can be sorted by the date the character was last played.
+type LastPlayedSort CharacterList
+
+func (characters LastPlayedSort) Len() int { return len(characters) }
+func (characters LastPlayedSort) Swap(i, j int) {
+	characters[i], characters[j] = characters[j], characters[i]
+}
+func (characters LastPlayedSort) Less(i, j int) bool {
+	return characters[i].CharacterBase.DateLastPlayed.Before(characters[j].CharacterBase.DateLastPlayed)
+}
+
+// findDestinationCharacter will find the first character matching the provided class name
+// or an error if the account doesn't have a class of the specified type.
+func findDestinationCharacter(characters CharacterList, class string) (*Character, error) {
 
 	if class == "vault" {
 		return nil, nil
@@ -42,4 +58,22 @@ func findDestinationCharacter(characters []*Character, class string) (*Character
 	}
 
 	return nil, errors.New("could not find the specified destination character")
+}
+
+// finDestinationCharacterIndex will find the first index of a character with the provided class name
+// or an error if the account doesn't have a character of the specified class.
+func findDestinationCharacterIndex(characters CharacterList, class string) (int, error) {
+
+	if class == "vault" {
+		return -1, nil
+	}
+
+	destinationHash := classNameToHash[class]
+	for index, char := range characters {
+		if char.CharacterBase.ClassHash == destinationHash {
+			return index, nil
+		}
+	}
+
+	return -2, errors.New("No character of that type on this account")
 }

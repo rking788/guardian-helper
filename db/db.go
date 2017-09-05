@@ -15,6 +15,7 @@ type LookupDB struct {
 	HashFromNameStmt *sql.Stmt
 	NameFromHashStmt *sql.Stmt
 	EngramHashStmt   *sql.Stmt
+	ItemMetadataStmt *sql.Stmt
 }
 
 var db1 *LookupDB
@@ -54,11 +55,18 @@ func InitDatabase() error {
 		return err
 	}
 
+	itemMetadataStmt, err := db.Prepare("SELECT item_hash, tier_type, class_type FROM items")
+	if err != nil {
+		fmt.Println("DB error: ", err.Error())
+		return err
+	}
+
 	db1 = &LookupDB{
 		Database:         db,
 		HashFromNameStmt: stmt,
 		NameFromHashStmt: nameFromHashStmt,
 		EngramHashStmt:   engramHashStmt,
+		ItemMetadataStmt: itemMetadataStmt,
 	}
 
 	return nil
@@ -103,6 +111,23 @@ func FindEngramHashes() (map[uint]bool, error) {
 	}
 
 	return result, nil
+}
+
+// LoadItemMetadata will load all rows from the database for all items loaded out of the manifest.
+// Only the required columns will be loaded into memory that need to be used later for common operations.
+func LoadItemMetadata() (*sql.Rows, error) {
+
+	db, err := GetDBConnection()
+	if err != nil {
+		return nil, err
+	}
+
+	rows, err := db.ItemMetadataStmt.Query()
+	if err != nil {
+		return nil, err
+	}
+
+	return rows, nil
 }
 
 // GetItemHashFromName is in charge of querying the database and reading

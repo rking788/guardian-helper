@@ -1,3 +1,7 @@
 .vscode
 local_tools/*
 config/utterances.txt
+guardian-helper
+*.mprof
+*.prof
+*.test
