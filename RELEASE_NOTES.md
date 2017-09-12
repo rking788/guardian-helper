@@ -1,7 +1,7 @@
-Version 0.2.0
+Version 1.0.0
 ===============
-- Added support for querying data from [Trials Report](https://trials.report) ([Github](https://github.com/DestinyTrialsReport/DestinyTrialsReport))
-  - Top used weapons and categories
-  - Personal performance stats for current week
-  - Personal top used weapons
-  - Current map
+- Updated to support the Destiny 2 API.
+- Added the DestinyJoke intent handler to tell random Destiny related jokes.
+- Refactored the way intent handlers are defined.
+- Added a AuthHandler middleware to wrap calls that require access_tokens from Bungie.
+
