@@ -1,3 +1,8 @@
+Version 0.3.0
+===============
+- Added support for unloading engrams to the vault
+- Added support for equipping max light loadouts to the current character
+
 Version 0.2.0
 ===============
 - Added support for querying data from [Trials Report](https://trials.report) ([Github](https://github.com/DestinyTrialsReport/DestinyTrialsReport))

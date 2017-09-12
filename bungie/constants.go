@@ -6,23 +6,57 @@ const (
 	//ItemsEndpointFormat       = "http://localhost:8000/%d/%s/items.json"
 	//TransferItemEndpointURL           = "http://localhost:8000/d1/Platform/Destiny/TransferItem/"
 	//EquipItemEndpointURL              = "http://localhost:8000/d1/Platform/Destiny/EquipItem/"
-	GetCurrentAccountEndpoint         = "https://www.bungie.net/Platform/User/GetCurrentBungieAccount/"
-	ItemsEndpointFormat               = "https://www.bungie.net/d1/Platform/Destiny/%d/Account/%s/Items"
-	MembershipIDFromDisplayNameFormat = "https://www.bungie.net/d1/Platform/Destiny/SearchDestinyPlayer/%d/%s/"
-	TransferItemEndpointURL           = "https://www.bungie.net/d1/Platform/Destiny/TransferItem/"
-	EquipItemEndpointURL              = "https://www.bungie.net/d1/Platform/Destiny/EquipItem/"
-	TrialsCurrentEndpoint             = "https://api.destinytrialsreport.com/currentMap"
+	GetCurrentAccountEndpoint            = "https://www.bungie.net/Platform/User/GetCurrentBungieAccount/"
+	GetMembershipsForCurrentUserEndpoint = "https://www.bungie.net/Platform/User/GetMembershipsForCurrentUser/"
+	GetProfileEndpointFormat             = "https://www.bungie.net/platform/Destiny2/%d/Profile/%s"
+	TransferItemEndpointURL              = "https://www.bungie.net/Platform/Destiny2/Actions/Items/TransferItem/"
+	EquipSingleItemEndpointURL           = "https://www.bungie.net/Platform/Destiny2/Actions/Items/EquipItem/"
+	EquipMultiItemsEndpointURL           = "https://www.bungie.net/Platform/Destiny2/Actions/Items/EquipItems/"
+
+	D1ItemsEndpointFormat               = "https://www.bungie.net/d1/Platform/Destiny/%d/Account/%s/Items"
+	D1MembershipIDFromDisplayNameFormat = "https://www.bungie.net/d1/Platform/Destiny/SearchDestinyPlayer/%d/%s/"
+	D1TransferItemEndpointURL           = "https://www.bungie.net/d1/Platform/Destiny/TransferItem/"
+	D1EquipItemEndpointURL              = "https://www.bungie.net/d1/Platform/Destiny/EquipItem/"
+	D1TrialsCurrentEndpoint             = "https://api.destinytrialsreport.com/currentMap"
+)
+
+// Component constant values that are needed for certain Bungie API requests that specify which
+// collections of values should be returned in the response.
+const (
+	ProfilesComponent              = "100"
+	VendorReceiptsComponent        = "101"
+	ProfileInventoriesComponent    = "102"
+	ProfileCurrenciesComponent     = "103"
+	CharactersComponent            = "200"
+	CharacterInventoriesComponent  = "201"
+	CharacterProgressionsComponent = "202"
+	CharacterRenderDataComponent   = "203"
+	CharacterActivitiesComponent   = "204"
+	CharacterEquipmentComponent    = "205"
+	ItemInstancesComponent         = "300"
+	ItemObjectivesComponent        = "301"
+	ItemPerksComponent             = "302"
+	ItemRenderDataComponent        = "303"
+	ItemStatsComponent             = "304"
+	ItemSocketsComponent           = "305"
+	ItemTalentGridsComponent       = "306"
+	ItemCommonDataComponent        = "307"
+	ItemPlugStatesComponent        = "308"
+	VendorsComponent               = "400"
+	VendorCategoriesComponent      = "401"
+	VendorSalesComponent           = "402"
+	KiosksComponent                = "500"
 )
 
 // Destiny.TierType
 const (
-	UnknownTier  = uint(0)
-	CurrencyTier = uint(1)
-	BasicTier    = uint(2)
-	CommonTier   = uint(3)
-	RareTier     = uint(4)
-	SuperiorTier = uint(5)
-	ExoticTier   = uint(6)
+	UnknownTier  = 0
+	CurrencyTier = 1
+	BasicTier    = 2
+	CommonTier   = 3
+	RareTier     = 4
+	SuperiorTier = 5
+	ExoticTier   = 6
 )
 
 // Destiny.TansferStatuses
@@ -31,6 +65,15 @@ const (
 	ItemIsEquipped      = 1
 	NotTransferrable    = 2
 	NoRoomInDestination = 4
+)
+
+// Destiny.ItemLocation
+const (
+	UnknownLoc    = 0
+	InventoryLoc  = 1
+	VaultLoc      = 2
+	VendorLoc     = 3
+	PostmasterLoc = 4
 )
 
 // Hash values for different class types 'classHash' JSON key
@@ -54,10 +97,10 @@ var classNameToHash = map[string]uint{
 
 // Class Enum value passed in some of the Destiny API responses
 const (
-	TitanEnum        = uint(0)
-	HunterEnum       = uint(1)
-	WarlockEnum      = uint(2)
-	UnknownClassEnum = uint(3)
+	TitanEnum        = 0
+	HunterEnum       = 1
+	WarlockEnum      = 2
+	UnknownClassEnum = 3
 )
 
 // Hash values for Race types 'raceHash' JSON key
