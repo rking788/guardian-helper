@@ -96,10 +96,16 @@
 			"revisionTime": "2017-03-07T16:30:44Z"
 		},
 		{
-			"checksumSHA1": "M4CsuzpzAj3htNmia+NOIb52M/M=",
+			"checksumSHA1": "sD92z8qUUucBDH1Nt88SHzaWtTU=",
+			"path": "github.com/mikeflynn/go-alexa",
+			"revision": "107980aa6911cf257d62f5d4e9d575e88fde29e4",
+			"revisionTime": "2017-07-19T02:51:28Z"
+		},
+		{
+			"checksumSHA1": "gFmdAa0MWyEmOo9sYeNxNzPLXe0=",
 			"path": "github.com/mikeflynn/go-alexa/skillserver",
-			"revision": "5d4071c39457e5022c5226ca41a9e1494c0d31a8",
-			"revisionTime": "2017-05-31T11:05:42Z"
+			"revision": "107980aa6911cf257d62f5d4e9d575e88fde29e4",
+			"revisionTime": "2017-07-19T02:51:28Z"
 		},
 		{
 			"checksumSHA1": "Y+HGqEkYM15ir+J93MEaHdyFy0c=",

@@ -3,8 +3,10 @@ package main
 import (
 	"flag"
 	"fmt"
+	"net/http"
 	"net/http/httputil"
 	"os"
+	"time"
 
 	"github.com/rking788/guardian-helper/bungie"
 
@@ -23,6 +25,10 @@ var (
 			OnLaunch:       EchoIntentHandler,
 			OnSessionEnded: EchoSessionEndedHandler,
 		},
+		"/health": skillserver.StdApplication{
+			Methods: "GET",
+			Handler: healthHandler,
+		},
 	}
 )
 
@@ -38,6 +44,7 @@ var (
 		"TrialsPersonalTopWeapons": alexa.AuthWrapper(alexa.PersonalTopWeapons),
 		"UnloadEngrams":            alexa.AuthWrapper(alexa.UnloadEngrams),
 		"EquipMaxLight":            alexa.AuthWrapper(alexa.MaxLight),
+		"DestinyJoke":              alexa.DestinyJoke,
 		"AMAZON.HelpIntent":        alexa.HelpPrompt,
 	}
 )
@@ -85,7 +92,14 @@ func main() {
 	// }()
 
 	fmt.Println(fmt.Sprintf("Start listening on port(%s)", port))
-	skillserver.Run(Applications, port)
+	err = skillserver.RunSSL(Applications, port, "/etc/letsencrypt/live/warmind.network/fullchain.pem", "/etc/letsencrypt/live/warmind.network/privkey.pem")
+	if err != nil {
+		fmt.Println("Error starting the application!: ", err.Error())
+	}
+}
+
+func healthHandler(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte("Up"))
 }
 
 // Alexa skill related functions
@@ -100,6 +114,12 @@ func EchoSessionEndedHandler(echoRequest *skillserver.EchoRequest, echoResponse 
 // EchoIntentHandler is a handler method that is responsible for receiving the
 // call from a Alexa command and returning the correct speech or cards.
 func EchoIntentHandler(echoRequest *skillserver.EchoRequest, echoResponse *skillserver.EchoResponse) {
+
+	// Time the intent handler to determine if it is taking longer than normal
+	startTime := time.Now()
+	defer func(start time.Time) {
+		fmt.Printf("IntentHandler execution time: %v\n", time.Since(start))
+	}(startTime)
 
 	var response *skillserver.EchoResponse
 

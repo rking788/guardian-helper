@@ -78,6 +78,10 @@ func (this *EchoResponse) OutputSpeech(text string) *EchoResponse {
 	return this
 }
 
+func (this *EchoResponse) Card(title string, content string) *EchoResponse {
+	return this.SimpleCard(title, content)
+}
+
 func (this *EchoResponse) OutputSpeechSSML(text string) *EchoResponse {
 	this.Response.OutputSpeech = &EchoRespPayload{
 		Type: "SSML",
@@ -85,10 +89,6 @@ func (this *EchoResponse) OutputSpeechSSML(text string) *EchoResponse {
 	}
 
 	return this
-}
-
-func (this *EchoResponse) Card(title string, content string) *EchoResponse {
-	return this.SimpleCard(title, content)
 }
 
 func (this *EchoResponse) SimpleCard(title string, content string) *EchoResponse {

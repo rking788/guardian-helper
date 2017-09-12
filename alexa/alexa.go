@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/rking788/guardian-helper/bungie"
+	"github.com/rking788/guardian-helper/db"
 	"github.com/rking788/guardian-helper/trials"
 
 	"strings"
@@ -234,6 +235,26 @@ func UnloadEngrams(request *skillserver.EchoRequest) (response *skillserver.Echo
 		response = skillserver.NewEchoResponse()
 		response.OutputSpeech("Sorry Guardian, an error occurred moving your engrams.")
 	}
+
+	return
+}
+
+// DestinyJoke will return the desired text for a random joke from the database.
+func DestinyJoke(request *skillserver.EchoRequest) (response *skillserver.EchoResponse) {
+
+	response = skillserver.NewEchoResponse()
+	setup, punchline, err := db.GetRandomJoke()
+	if err != nil {
+		fmt.Println("Error loading joke from DB: ", err.Error())
+		response.OutputSpeech("Sorry Guardian, I was unable to load a joke right now.")
+		return
+	}
+
+	builder := skillserver.NewSSMLTextBuilder()
+	builder.AppendPlainSpeech(setup).
+		AppendBreak("2s", "medium", "").
+		AppendPlainSpeech(punchline)
+	response.OutputSpeechSSML(builder.Build())
 
 	return
 }

@@ -162,7 +162,8 @@ func GetCurrentWeek(token string) (*skillserver.EchoResponse, error) {
 // linked account, this eventually should take platform into account.
 func findMembershipID(token string) (string, error) {
 
-	client := bungie.NewClient(token, os.Getenv("BUNGIE_API_KEY"))
+	client := bungie.Clients.Get()
+	client.AddAuthValues(token, os.Getenv("BUNGIE_API_KEY"))
 	currentAccount, err := client.GetCurrentAccount()
 	if err != nil {
 		fmt.Println("Error loading current account info from Bungie.net: ", err.Error())

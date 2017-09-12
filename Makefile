@@ -1,7 +1,7 @@
 BUILD_DATE := `date +%Y-%m-%d\ %H:%M`
 VERSIONFILE := version.go
 APP_VERSION := `bash ./generate_version.sh`
-APP_NAME := "bungie-manifest-updater"
+APP_NAME := "guardian-helper"
 
 genversion:
 	rm -f $(VERSIONFILE)
@@ -14,5 +14,9 @@ build: genversion
 	go build
 install: genversion
 	go install
+deploy: genversion
+	GOOS=linux GOARCH=amd64 go build
+	scp ./$(APP_NAME) do:
+	rm $(APP_NAME)
 clean:
 	rm $(APP_NAME)
