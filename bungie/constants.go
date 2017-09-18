@@ -12,12 +12,6 @@ const (
 	TransferItemEndpointURL              = "https://www.bungie.net/Platform/Destiny2/Actions/Items/TransferItem/"
 	EquipSingleItemEndpointURL           = "https://www.bungie.net/Platform/Destiny2/Actions/Items/EquipItem/"
 	EquipMultiItemsEndpointURL           = "https://www.bungie.net/Platform/Destiny2/Actions/Items/EquipItems/"
-
-	D1ItemsEndpointFormat               = "https://www.bungie.net/d1/Platform/Destiny/%d/Account/%s/Items"
-	D1MembershipIDFromDisplayNameFormat = "https://www.bungie.net/d1/Platform/Destiny/SearchDestinyPlayer/%d/%s/"
-	D1TransferItemEndpointURL           = "https://www.bungie.net/d1/Platform/Destiny/TransferItem/"
-	D1EquipItemEndpointURL              = "https://www.bungie.net/d1/Platform/Destiny/EquipItem/"
-	D1TrialsCurrentEndpoint             = "https://api.destinytrialsreport.com/currentMap"
 )
 
 // Component constant values that are needed for certain Bungie API requests that specify which

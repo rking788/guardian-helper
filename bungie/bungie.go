@@ -1,18 +1,17 @@
 package bungie
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
 	"net"
-	"net/http"
 	"os"
 	"sort"
 	"strconv"
 	"sync"
 	"time"
 
+	"github.com/kpango/glg"
 	"github.com/mikeflynn/go-alexa/skillserver"
 	"github.com/rking788/guardian-helper/db"
 )
@@ -76,20 +75,39 @@ const (
 
 var bucketHashLookup map[EquipmentBucket]uint
 
+func init() {
+
+	err := PopulateEngramHashes()
+	if err != nil {
+		glg.Errorf("Error populating engram hashes: %s\nExiting...", err.Error())
+		return
+	}
+	err = PopulateBucketHashLookup()
+	if err != nil {
+		glg.Errorf("Error populating bucket hash values: %s\nExiting...", err.Error())
+		return
+	}
+	err = PopulateItemMetadata()
+	if err != nil {
+		glg.Errorf("Error populating item metadata lookup table: %s\nExiting...", err.Error())
+		return
+	}
+}
+
 // PopulateEngramHashes will intialize the map holding all item_hash values that represent engram types.
 func PopulateEngramHashes() error {
 
 	var err error
 	engramHashes, err = db.FindEngramHashes()
 	if err != nil {
-		fmt.Println("Error populating engram item_hash values: ", err.Error())
+		glg.Errorf("Error populating engram item_hash values: %s", err.Error())
 		return err
 	} else if len(engramHashes) <= 0 {
-		fmt.Println("Didn't find any engram item hashes in the database.")
+		glg.Error("Didn't find any engram item hashes in the database.")
 		return errors.New("No engram item_hash values found")
 	}
 
-	fmt.Printf("Loaded %d hashes representing engrams into the map.\n", len(engramHashes))
+	glg.Infof("Loaded %d hashes representing engrams into the map.", len(engramHashes))
 	return nil
 }
 
@@ -114,7 +132,7 @@ func PopulateItemMetadata() error {
 	if rows.Err() != nil {
 		return rows.Err()
 	}
-	fmt.Printf("Loaded %d item metadata entries\n", len(itemMetadata))
+	glg.Infof("Loaded %d item metadata entries", len(itemMetadata))
 
 	return nil
 }
@@ -140,33 +158,6 @@ func PopulateBucketHashLookup() error {
 	bucketHashLookup[ClassArmor] = 1585787867
 
 	return nil
-}
-
-// MembershipIDFromDisplayName is responsible for retrieving the Destiny
-// membership ID from the Bungie API given a specific display name
-// from either Xbox or PSN
-// TODO: This may no longer be needed as the GetCurrentAccount endpoint should fix all this.
-func MembershipIDFromDisplayName(displayName string) string {
-
-	endpoint := fmt.Sprintf(D1MembershipIDFromDisplayNameFormat, XBOX, displayName)
-	client := Clients.Get()
-	request, _ := http.NewRequest("GET", endpoint, nil)
-	request.Header.Add("X-Api-Key", os.Getenv("BUNGIE_API_KEY"))
-
-	membershipResponse, err := client.Do(request)
-	if err != nil {
-		fmt.Println("Failed to request Destiny membership ID from Bungie!")
-		return ""
-	}
-
-	jsonResponse := MembershipIDLookUpResponse{}
-	err = json.NewDecoder(membershipResponse.Body).Decode(&jsonResponse)
-	if err != nil {
-		fmt.Println("Couldn't read the response body from the Bungie API!")
-		return ""
-	}
-
-	return jsonResponse.Response[0].MembershipID
 }
 
 // CountItem will count the number of the specified item and return an EchoResponse
@@ -202,7 +193,7 @@ func CountItem(itemName, accessToken string) (*skillserver.EchoResponse, error) 
 		return response, nil
 	}
 	matchingItems := msg.Profile.AllItems.FilterItems(itemHashFilter, hash)
-	fmt.Printf("Found %d items entries in characters inventory.\n", len(matchingItems))
+	glg.Infof("Found %d items entries in characters inventory.", len(matchingItems))
 
 	if len(matchingItems) == 0 {
 		outputStr := fmt.Sprintf("You don't have any %s on any of your characters.", itemName)
@@ -256,12 +247,12 @@ func TransferItem(itemName, accessToken, sourceClass, destinationClass string, c
 
 	msg := <-profileChannel
 	if msg.error != nil {
-		fmt.Println("Failed to read the Items response from Bungie!: ", err.Error())
+		glg.Errorf("Failed to read the Items response from Bungie!: %s", err.Error())
 		return nil, err
 	}
 
 	matchingItems := msg.Profile.AllItems.FilterItems(itemHashFilter, hash)
-	fmt.Printf("Found %d items entries in characters inventory.\n", len(matchingItems))
+	glg.Infof("Found %d items entries in characters inventory.", len(matchingItems))
 
 	if len(matchingItems) == 0 {
 		outputStr := fmt.Sprintf("You don't have any %s on any of your characters.", itemName)
@@ -273,7 +264,7 @@ func TransferItem(itemName, accessToken, sourceClass, destinationClass string, c
 	destCharacter, err := allChars.findDestinationCharacter(destinationClass)
 	if err != nil {
 		output := fmt.Sprintf("Sorry Guardian, I could not transfer your %s because you do not have any %s characters in Destiny.", itemName, destinationClass)
-		fmt.Println(output)
+		glg.Error(output)
 		response.OutputSpeech(output)
 
 		db.InsertUnknownValueIntoTable(destinationClass, db.UnknownClassTable)
@@ -307,7 +298,7 @@ func EquipMaxLightGear(accessToken string) (*skillserver.EchoResponse, error) {
 
 	msg := <-profileChannel
 	if msg.error != nil {
-		fmt.Println("Failed to read the Items response from Bungie!: ", msg.error.Error())
+		glg.Errorf("Failed to read the Items response from Bungie!: %s", msg.error.Error())
 		return nil, msg.error
 	}
 
@@ -317,12 +308,12 @@ func EquipMaxLightGear(accessToken string) (*skillserver.EchoResponse, error) {
 
 	loadout := findMaxLightLoadout(msg.Profile, destinationID)
 
-	fmt.Printf("Found loadout to equip: %v\n", loadout)
-	fmt.Printf("Calculated light for loadout: %f\n", loadout.calculateLightLevel())
+	glg.Debugf("Found loadout to equip: %v", loadout)
+	glg.Infof("Calculated light for loadout: %f", loadout.calculateLightLevel())
 
 	err := equipLoadout(loadout, destinationID, msg.Profile, membershipType, client)
 	if err != nil {
-		fmt.Println("Failed to equip the specified loadout: ", err.Error())
+		glg.Errorf("Failed to equip the specified loadout: %s", err.Error())
 		return nil, err
 	}
 
@@ -343,7 +334,7 @@ func UnloadEngrams(accessToken string) (*skillserver.EchoResponse, error) {
 
 	msg := <-profileChannel
 	if msg.error != nil {
-		fmt.Println("Failed to read the Items response from Bungie!: ", msg.error.Error())
+		glg.Errorf("Failed to read the Items response from Bungie!: %s", msg.error.Error())
 		return nil, msg.error
 	}
 
@@ -359,7 +350,7 @@ func UnloadEngrams(accessToken string) (*skillserver.EchoResponse, error) {
 		foundCount += item.Quantity
 	}
 
-	fmt.Printf("Found %d engrams on all characters\n", foundCount)
+	glg.Infof("Found %d engrams on all characters", foundCount)
 
 	allChars := msg.Profile.Characters
 
@@ -407,7 +398,7 @@ func transferItem(itemSet []*Item, fullCharList []*Character, destCharacter *Cha
 		numToTransfer := item.Quantity
 		if count != -1 {
 			numNeeded := count - totalCount
-			fmt.Printf("Getting to transfer logic: needed=%d, toTransfer=%d\n", numNeeded, numToTransfer)
+			glg.Debugf("Getting to transfer logic: needed=%d, toTransfer=%d", numNeeded, numToTransfer)
 			if numToTransfer > numNeeded {
 				numToTransfer = numNeeded
 			}
@@ -422,7 +413,7 @@ func transferItem(itemSet []*Item, fullCharList []*Character, destCharacter *Cha
 
 			defer wg.Done()
 
-			fmt.Printf("Transferring item: %+v\n", item)
+			glg.Infof("Transferring item: %+v", item)
 
 			// TODO: I think this is probably the best way to tell if it is in the vault?
 			// maybe need to check the bucket hash instead?
@@ -443,7 +434,6 @@ func transferItem(itemSet []*Item, fullCharList []*Character, destCharacter *Cha
 				transferClient := Clients.Get()
 				transferClient.AddAuthValues(client.AccessToken, client.APIToken)
 				transferClient.PostTransferItem(requestBody)
-				//time.Sleep(TransferDelay)
 			}
 
 			// TODO: This could possibly be handled more efficiently if we know the items are uniform,
@@ -467,7 +457,6 @@ func transferItem(itemSet []*Item, fullCharList []*Character, destCharacter *Cha
 			transferClient := Clients.Get()
 			transferClient.AddAuthValues(client.AccessToken, client.APIToken)
 			transferClient.PostTransferItem(vaultToCharRequestBody)
-			//time.Sleep(TransferDelay)
 
 		}(item, fullCharList, &wg)
 
@@ -495,7 +484,7 @@ func equipItems(itemSet []*Item, characterID string, characters CharacterList, m
 
 		instanceID, err := strconv.ParseInt(item.InstanceID, 10, 64)
 		if err != nil {
-			fmt.Println("Not equipping item because the instance ID could not be parsed to an Int: ", err.Error())
+			glg.Errorf("Not equipping item because the instance ID could not be parsed to an Int: %s", err.Error())
 			continue
 		}
 		ids = append(ids, instanceID)
@@ -516,7 +505,7 @@ func equipItems(itemSet []*Item, characterID string, characters CharacterList, m
 
 // equipItem will take the specified item and equip it on the provided character
 func equipItem(item *Item, character *Character, membershipType int, client *Client) {
-	fmt.Printf("Equipping item(%d)...\n", item.ItemHash)
+	glg.Debugf("Equipping item(%d)...", item.ItemHash)
 
 	equipRequestBody := map[string]interface{}{
 		"itemId":         item.InstanceID,
@@ -525,14 +514,6 @@ func equipItem(item *Item, character *Character, membershipType int, client *Cli
 	}
 
 	client.PostEquipItem(equipRequestBody, false)
-}
-
-// AllItemsMsg is a type used by channels that need to communicate back from a
-// goroutine to the calling function.
-type AllItemsMsg struct {
-	*D1ItemsEndpointResponse
-	*D1GetAccountResponse
-	error
 }
 
 // Profile contains all information about a specific Destiny membership, including character and inventory information.
@@ -544,6 +525,8 @@ type Profile struct {
 	Characters     CharacterList
 
 	AllItems ItemList
+	// NOTE: Still not sure this is the best approach to flatten items into a single list,
+	// it works well for now so we will go with it. There are too many potential spots to look for an item.
 	//Equipments       map[string]ItemList
 	//Inventories      map[string]ItemList
 	//ProfileInventory ItemList
@@ -564,7 +547,7 @@ func GetProfileForCurrentUser(client *Client, responseChan chan *ProfileMsg) {
 	currentAccount, _ := client.GetCurrentAccount()
 
 	if currentAccount == nil {
-		fmt.Println("Failed to load current account with the specified access token!")
+		glg.Error("Failed to load current account with the specified access token!")
 		responseChan <- &ProfileMsg{
 			Profile: nil,
 			error:   errors.New("Couldn't load current user information"),
@@ -579,7 +562,7 @@ func GetProfileForCurrentUser(client *Client, responseChan chan *ProfileMsg) {
 
 	profileResponse, err := client.GetUserProfileData(membership.MembershipType, membership.MembershipID)
 	if err != nil {
-		fmt.Println("Failed to read the Profile response from Bungie!: ", err.Error())
+		glg.Errorf("Failed to read the Profile response from Bungie!: %s", err.Error())
 		responseChan <- &ProfileMsg{
 			Profile: nil,
 			error:   errors.New("Failed to read current user's profile: " + err.Error()),
@@ -590,7 +573,7 @@ func GetProfileForCurrentUser(client *Client, responseChan chan *ProfileMsg) {
 	profile := fixupProfileFromProfileResponse(profileResponse)
 
 	for _, char := range profile.Characters {
-		fmt.Printf("Found character(%s) with last played date: %+v\n", classHashToName[char.ClassHash], char.DateLastPlayed)
+		glg.Debugf("Character(%s) last played date: %+v", classHashToName[char.ClassHash], char.DateLastPlayed)
 	}
 
 	responseChan <- &ProfileMsg{

@@ -36,42 +36,6 @@ type ItemInstance struct {
 	} `json:"primaryStat"`
 }
 
-// D1ItemsEndpointResponse represents the response from a call to the /Items endpoint
-type D1ItemsEndpointResponse struct {
-	Response *D1ItemsResponse `json:"Response"`
-	Base     *BaseResponse
-}
-
-// D1ItemsResponse is the inner response from the /Items endpoint
-type D1ItemsResponse struct {
-	Data *D1ItemsData `json:"data"`
-}
-
-// D1ItemsData is the data attribute of the /Items response
-type D1ItemsData struct {
-	Items      ItemList      `json:"items"`
-	Characters CharacterList `json:"characters"`
-}
-
-// D1Item will represent a single inventory item returned by the /Items character endpoint.
-type D1Item struct {
-	ItemHash       uint   `json:"itemHash"`
-	ItemID         string `json:"itemId"`
-	Quantity       uint   `json:"quantity"`
-	DamageType     uint   `json:"damageType"`
-	DamageTypeHash uint   `json:"damageTypeHash"`
-	//  IsGridComplete `json:"isGridComplete"`
-	PrimaryStat struct {
-		StatHash uint `json:"statHash"`
-		Value    uint `json:"value"`
-		MaxValue uint `json:"maximumValue"`
-	} `json:"primaryStat"`
-	TransferStatus uint `json:"transferStatus"`
-	State          uint `json:"state"`
-	CharacterIndex int  `json:"characterIndex"`
-	BucketHash     uint `json:"bucketHash"`
-}
-
 // ItemMetadata is responsible for holding data from the manifest in-memory that is used often
 // when interacting wth different character's inventories. These values are used so much
 // that it would be a big waste of time to query the manifest data from the DB for every use.
@@ -100,6 +64,11 @@ func (i *Item) Power() int {
 	}
 
 	return i.PrimaryStat.Value
+}
+
+// IsInVault will determine if the item is in the vault or not. True if it is; False if it is not.
+func (i *Item) IsInVault() bool {
+	return i.Character == nil
 }
 
 // ItemFilter is a type that will be used as a paramter to a filter function.
@@ -190,14 +159,4 @@ func itemClassTypeFilter(item *Item, classType interface{}) bool {
 	// TODO: Is this correct? 3 is UNKNOWN class type, that seems to be what is used for class agnostic items.
 	return (itemMetadata[item.ItemHash].ClassType == 3) ||
 		(itemMetadata[item.ItemHash].ClassType == classType.(int))
-}
-
-func (data *D1ItemsData) characterClassNameAtIndex(index int) string {
-	if index == -1 {
-		return "Vault"
-	} else if index >= len(data.Characters) {
-		return "Unknown character"
-	} else {
-		return classHashToName[data.Characters[index].ClassHash]
-	}
 }

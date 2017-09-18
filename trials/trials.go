@@ -14,6 +14,7 @@ import (
 
 	"bytes"
 
+	"github.com/kpango/glg"
 	"github.com/mikeflynn/go-alexa/skillserver"
 	"github.com/rking788/guardian-helper/bungie"
 	"github.com/rking788/guardian-helper/db"
@@ -87,7 +88,7 @@ func GetCurrentMap() (*skillserver.EchoResponse, error) {
 	currentMap, err := requestCurrentMap()
 	start, err := time.Parse("2006-01-02 15:04:05", currentMap.StartDate)
 	if err != nil {
-		fmt.Println("Failed to read the current map from Trials Report!: ", err.Error())
+		glg.Errorf("Failed to read the current map from Trials Report!: %s", err.Error())
 		return nil, err
 	}
 
@@ -133,7 +134,7 @@ func GetCurrentWeek(token string) (*skillserver.EchoResponse, error) {
 
 	mapResponse, err := http.DefaultClient.Do(req)
 	if err != nil {
-		fmt.Println("Failed to read the current week stats response from Trials Report!: ", err.Error())
+		glg.Errorf("Failed to read the current week stats response from Trials Report!: %s", err.Error())
 		return nil, err
 	}
 	defer mapResponse.Body.Close()
@@ -141,7 +142,7 @@ func GetCurrentWeek(token string) (*skillserver.EchoResponse, error) {
 	currentWeeks := make([]CurrentWeek, 0, 1)
 	err = json.NewDecoder(mapResponse.Body).Decode(&currentWeeks)
 	if err != nil {
-		fmt.Println("Error parsing trials report response: ", err.Error())
+		glg.Errorf("Error parsing trials report response: %s", err.Error())
 		return nil, err
 	}
 
@@ -166,7 +167,7 @@ func findMembershipID(token string) (string, error) {
 	client.AddAuthValues(token, os.Getenv("BUNGIE_API_KEY"))
 	currentAccount, err := client.GetCurrentAccount()
 	if err != nil {
-		fmt.Println("Error loading current account info from Bungie.net: ", err.Error())
+		glg.Errorf("Error loading current account info from Bungie.net: %s", err.Error())
 		return "", err
 	} else if currentAccount.Response == nil || currentAccount.Response.DestinyMemberships == nil ||
 		len(currentAccount.Response.DestinyMemberships) == 0 {
@@ -184,7 +185,7 @@ func GetWeaponUsagePercentages() (*skillserver.EchoResponse, error) {
 
 	currentMap, err := requestCurrentMap()
 	if err != nil {
-		fmt.Println("Error loading current map from Trials Report: ", err.Error())
+		glg.Errorf("Error loading current map from Trials Report: %s", err.Error())
 		return nil, err
 	}
 
@@ -195,7 +196,7 @@ func GetWeaponUsagePercentages() (*skillserver.EchoResponse, error) {
 
 	weaponResponse, err := http.DefaultClient.Do(req)
 	if err != nil {
-		fmt.Println("Error sending weapon percentages request to Trial Report: ", err.Error())
+		glg.Errorf("Error sending weapon percentages request to Trial Report: %s", err.Error())
 		return nil, err
 	}
 	defer weaponResponse.Body.Close()
@@ -220,7 +221,7 @@ func GetPersonalTopWeapons(token string) (*skillserver.EchoResponse, error) {
 
 	membershipID, err := findMembershipID(token)
 	if err != nil {
-		fmt.Println("Error loading membership ID for linked account: ", err.Error())
+		glg.Errorf("Error loading membership ID for linked account: %s", err.Error())
 		return nil, err
 	}
 
@@ -231,7 +232,7 @@ func GetPersonalTopWeapons(token string) (*skillserver.EchoResponse, error) {
 
 	topWeaponsResponse, err := http.DefaultClient.Do(req)
 	if err != nil {
-		fmt.Println("Error sending weapon percentages request to Trial Report: ", err.Error())
+		glg.Errorf("Error sending weapon percentages request to Trial Report: %s", err.Error())
 		return nil, err
 	}
 	defer topWeaponsResponse.Body.Close()
@@ -276,7 +277,7 @@ func GetPopularWeaponTypes() (*skillserver.EchoResponse, error) {
 
 	weekResponse, err := http.DefaultClient.Do(req)
 	if err != nil {
-		fmt.Println("Failed to read the current week stats response from Trials Report!: ", err.Error())
+		glg.Errorf("Failed to read the current week stats response from Trials Report!: %s", err.Error())
 		return nil, err
 	}
 	defer weekResponse.Body.Close()
@@ -284,7 +285,7 @@ func GetPopularWeaponTypes() (*skillserver.EchoResponse, error) {
 	weekInfo := &WeekInfo{}
 	err = json.NewDecoder(weekResponse.Body).Decode(&weekInfo)
 	if err != nil {
-		fmt.Println("Failed to decode response from trials report: ", err.Error())
+		glg.Errorf("Failed to decode response from trials report: %s", err.Error())
 		return nil, err
 	}
 
@@ -343,6 +344,8 @@ func killsSort(a, b WeaponStats) bool {
 	return aKills > bKills
 }
 
+// TODO CRITICAL : This should be reworked to work with kinetic, energy, and power weapons. Should read
+// these values from the Bungie package as well not be redefined here.
 func (stat *WeaponStats) isPrimary() bool {
 
 	return stat.Bucket == "1498876634"

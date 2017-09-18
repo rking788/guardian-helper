@@ -1,13 +1,17 @@
 package bungie
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"time"
+
+	"github.com/kpango/glg"
 )
 
 // BaseResponse represents the data returned as part of all of the Bungie API
@@ -41,7 +45,11 @@ type CurrentUserMembershipsResponse struct {
 type GetProfileResponse struct {
 	*BaseResponse
 	Response *struct {
-		ItemComponents *struct {
+		CharacterInventories *CharacterMappedItemListData `json:"characterInventories"`
+		CharacterEquipment   *CharacterMappedItemListData `json:"characterEquipment"`
+		ProfileInventory     *ItemListData                `json:"profileInventory"`
+		ProfileCurrencies    *ItemListData                `json:"profileCurrencies"`
+		ItemComponents       *struct {
 			Instances *struct {
 				Data map[string]*ItemInstance `json:"data"`
 			} `json:"instances"`
@@ -56,58 +64,22 @@ type GetProfileResponse struct {
 				} `json:"userInfo"`
 			} `json:"data"`
 		} `json:"profile"`
-		CharacterInventories *struct {
-			Data map[string]*struct {
-				Items ItemList `json:"items"`
-			} `json:"data"`
-		} `json:"characterInventories"`
-		CharacterEquipment *struct {
-			Data map[string]*struct {
-				Items ItemList `json:"items"`
-			} `json:"data"`
-		} `json:"characterEquipment"`
-		ProfileInventory *struct {
-			Data *struct {
-				Items ItemList `json:"Items"`
-			} `json:"Data"`
-		} `json:"profileInventory"`
 		Characters *struct {
 			Data CharacterMap `json:"data"`
 		} `json:"Characters"`
-		ProfileCurrencies *struct {
-			Data *struct {
-				Items ItemList `json:"items"`
-			} `json:"data"`
-		} `json:"profileCurrencies"`
 	} `json:"Response"`
 }
 
-// D1GetAccountResponse is the response from a get current account API call
-// this information needs to be used in all of the character/user specific endpoints.
-type D1GetAccountResponse struct {
-	Response *struct {
-		DestinyMemberships []*struct {
-			MembershipType int    `json:"membershipType"`
-			DisplayName    string `json:"displayName"`
-			MembershipID   string `json:"membershipId"`
-		} `json:"destinyMemberships"`
-	} `json:"Response"`
-	Base *BaseResponse
+type ItemListData struct {
+	Data *struct {
+		Items ItemList `json:"items"`
+	} `json:"data"`
 }
 
-// MembershipIDLookUpResponse represents the response to a Destiny membership ID lookup call
-type MembershipIDLookUpResponse struct {
-	Response        []*MembershipData `json:"Response"`
-	ErrorCode       int               `json:"ErrorCode"`
-	ThrottleSeconds int               `json:"ThrottleSeconds"`
-	ErrorStatus     string            `json:"ErrorStatus"`
-	Message         string            `json:"Message"`
-	MessageData     interface{}       `json:"MessageData"`
-}
-
-// MembershipData represents the Response portion of the membership ID lookup
-type MembershipData struct {
-	MembershipID string `json:"membershipId"`
+type CharacterMappedItemListData struct {
+	Data map[string]*struct {
+		Items ItemList `json:"items"`
+	} `json:"data"`
 }
 
 // ClientPool is a simple client buffer that will provided round robin access to a collection of Clients.
@@ -124,7 +96,7 @@ func NewClientPool() *ClientPool {
 	for _, addr := range addresses {
 		client, err := NewCustomAddrClient(addr)
 		if err != nil {
-			fmt.Println("Error creating custom ipv6 client: ", err.Error())
+			glg.Errorf("Error creating custom ipv6 client: %s", err.Error())
 			continue
 		}
 
@@ -151,9 +123,28 @@ func (pool *ClientPool) Get() *Client {
 	return c
 }
 
-func readClientAddresses() []string {
-	// TODO: This should come from the environment or a file
-	return []string{}
+func readClientAddresses() (result []string) {
+	result = make([]string, 0, 32)
+
+	in, err := os.OpenFile("local_clients.txt", os.O_RDONLY, 0644)
+	if err != nil {
+		glg.Warn("Local clients list does not exist, using the default...")
+		return
+	}
+
+	scanner := bufio.NewScanner(in)
+	for scanner.Scan() {
+		addr := scanner.Text()
+		if addr != "" {
+			result = append(result, addr)
+		}
+	}
+
+	if err != nil {
+		glg.Errorf("Failed to read local clients: %s", err.Error())
+	}
+
+	return
 }
 
 // Client is a type that contains all information needed to make requests to the
@@ -219,7 +210,7 @@ func (c *Client) AuthenticationHeaders() map[string]string {
 // based on the OAuth token provided as part of the request.
 func (c *Client) GetCurrentAccount() (*CurrentUserMembershipsResponse, error) {
 
-	fmt.Println("Using client with local address: ", c.Address)
+	glg.Debugf("Client with local address: %s", c.Address)
 
 	req, _ := http.NewRequest("GET", GetMembershipsForCurrentUserEndpoint, nil)
 	req.Header.Add("Content-Type", "application/json")
@@ -227,7 +218,7 @@ func (c *Client) GetCurrentAccount() (*CurrentUserMembershipsResponse, error) {
 
 	membershipsResponse, err := c.Do(req)
 	if err != nil {
-		fmt.Println("Failed to read the Memberships response from Bungie!: ", err.Error())
+		glg.Errorf("Failed to read the Memberships response from Bungie!: %s", err.Error())
 		return nil, err
 	}
 	defer membershipsResponse.Body.Close()
@@ -242,7 +233,7 @@ func (c *Client) GetCurrentAccount() (*CurrentUserMembershipsResponse, error) {
 // of the supplied user's characters.
 func (c *Client) GetUserProfileData(membershipType int, membershipID string) (*GetProfileResponse, error) {
 
-	fmt.Println("Using client with local address: ", c.Address)
+	glg.Debugf("Client local address: %s", c.Address)
 
 	endpoint := fmt.Sprintf(GetProfileEndpointFormat, membershipType, membershipID)
 
@@ -269,37 +260,12 @@ func (c *Client) GetUserProfileData(membershipType int, membershipID string) (*G
 	return profile, nil
 }
 
-// GetUserItems will make a request to the bungie API and retrieve all of the
-// items for a specific Destiny membership ID. This includes all of their characters
-// as well as the vault. The vault with have a character index of -1.
-func (c *Client) GetUserItems(membershipType int, membershipID string) (*D1ItemsEndpointResponse, error) {
-
-	fmt.Println("Using client with local address: ", c.Address)
-
-	endpoint := fmt.Sprintf(D1ItemsEndpointFormat, membershipType, membershipID)
-
-	req, _ := http.NewRequest("GET", endpoint, nil)
-	req.Header.Add("Content-Type", "application/json")
-	c.AddAuthHeadersToRequest(req)
-
-	itemsResponse, err := c.Client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer itemsResponse.Body.Close()
-
-	itemsJSON := &D1ItemsEndpointResponse{}
-	json.NewDecoder(itemsResponse.Body).Decode(&itemsJSON)
-
-	return itemsJSON, nil
-}
-
 // PostTransferItem is responsible for calling the Bungie.net API to transfer
 // an item from a source to a destination. This could be either a user's character
 // or the vault.
 func (c *Client) PostTransferItem(body map[string]interface{}) {
 
-	fmt.Println("Using client with local address: ", c.Address)
+	glg.Debugf("Client local address: %s", c.Address)
 
 	// TODO: This retry logic should probably be added to a middleware type function
 	retry := true
@@ -314,7 +280,7 @@ func (c *Client) PostTransferItem(body map[string]interface{}) {
 
 		resp, err := c.Do(req)
 		if err != nil {
-			fmt.Println("Error transferring item: ", err.Error())
+			glg.Errorf("Error transferring item: %s", err.Error())
 			return
 		}
 		defer resp.Body.Close()
@@ -326,7 +292,7 @@ func (c *Client) PostTransferItem(body map[string]interface{}) {
 			retry = true
 		}
 
-		fmt.Printf("Response for transfer request: %+v\n", response)
+		glg.Infof("Response for transfer request: %+v", response)
 		attempts++
 		if retry == false || attempts >= 5 {
 			break
@@ -338,7 +304,7 @@ func (c *Client) PostTransferItem(body map[string]interface{}) {
 // an item on a specific character.
 func (c *Client) PostEquipItem(body map[string]interface{}, isMultipleItems bool) {
 
-	fmt.Println("Using client with local address: ", c.Address)
+	glg.Debugf("Client local address: %s", c.Address)
 	// TODO: This retry logic should probably be added to a middleware type function
 	retry := true
 	attempts := 0
@@ -356,7 +322,7 @@ func (c *Client) PostEquipItem(body map[string]interface{}, isMultipleItems bool
 
 		resp, err := c.Do(req)
 		if err != nil {
-			fmt.Println("Error equipping item: ", err.Error())
+			glg.Errorf("Error equipping item: %s", err.Error())
 			return
 		}
 		defer resp.Body.Close()
@@ -368,7 +334,7 @@ func (c *Client) PostEquipItem(body map[string]interface{}, isMultipleItems bool
 			retry = true
 		}
 
-		fmt.Printf("Response for equip request: %+v\n", response)
+		glg.Infof("Response for equip request: %+v", response)
 		attempts++
 		if retry == false || attempts >= 5 {
 			break

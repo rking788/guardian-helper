@@ -1,8 +1,9 @@
 package bungie
 
 import (
-	"fmt"
 	"sort"
+
+	"github.com/kpango/glg"
 )
 
 // Loadout will hold all items for a unique set of weapons, armor, ghost, class item, and artifact
@@ -15,14 +16,13 @@ func (l Loadout) calculateLightLevel() float64 {
 	light += float64(l[Kinetic].Power()) * 0.143
 	light += float64(l[Energy].Power()) * 0.143
 	light += float64(l[Power].Power()) * 0.143
-	//light += float64(l[Ghost].Power()) * 0.08
+	// Ghosts no longer have a light/power level
 
 	light += float64(l[Helmet].Power()) * 0.119
 	light += float64(l[Gauntlets].Power()) * 0.119
 	light += float64(l[Chest].Power()) * 0.119
 	light += float64(l[Legs].Power()) * 0.119
 	light += float64(l[ClassArmor].Power()) * 0.095
-	//light += float64(l[Artifact].Power()) * 0.08
 
 	return light
 }
@@ -41,8 +41,8 @@ func findMaxLightLoadout(profile *Profile, destinationID string) Loadout {
 	// Start by filtering all items that are NOT exotics
 	destinationClassType := profile.Characters.findCharacterFromID(destinationID).ClassType
 	filteredItems := profile.AllItems.
-		FilterItems(itemNotTierTypeFilter, ExoticTier).
-		FilterItems(itemClassTypeFilter, destinationClassType)
+		FilterItems(itemClassTypeFilter, destinationClassType).
+		FilterItems(itemNotTierTypeFilter, ExoticTier)
 	gearSortedByLight := groupAndSortGear(filteredItems)
 
 	// Find the best loadout given just legendary weapons
@@ -58,11 +58,11 @@ func findMaxLightLoadout(profile *Profile, destinationID string) Loadout {
 	exoticsSortedAndGrouped := groupAndSortGear(exotics)
 
 	// Override inventory items with exotics as needed
-	for _, bucket := range [3]EquipmentBucket{ClassArmor} {
+	for _, bucket := range []EquipmentBucket{ClassArmor} {
 		exoticCandidate := findBestItemForBucket(bucket, exoticsSortedAndGrouped[bucket], destinationID)
 		if exoticCandidate != nil && exoticCandidate.Power() > loadout[bucket].Power() {
-			fmt.Printf("Overriding %s...\n", bucket)
 			loadout[bucket] = exoticCandidate
+			glg.Debugf("Overriding %s...", bucket)
 		}
 	}
 
@@ -74,7 +74,7 @@ func findMaxLightLoadout(profile *Profile, destinationID string) Loadout {
 			if weaponExoticCandidate == nil || exoticCandidate.Power() > weaponExoticCandidate.Power() {
 				weaponExoticCandidate = exoticCandidate
 				weaponBucket = bucket
-				fmt.Printf("Overriding %s...\n", bucket)
+				glg.Debugf("Overriding %s...", bucket)
 			}
 		}
 	}
@@ -90,7 +90,7 @@ func findMaxLightLoadout(profile *Profile, destinationID string) Loadout {
 			if armorExoticCandidate == nil || exoticCandidate.Power() > armorExoticCandidate.Power() {
 				armorExoticCandidate = exoticCandidate
 				armorBucket = bucket
-				fmt.Printf("Overriding %s...\n", bucket)
+				glg.Debugf("Overriding %s...\n", bucket)
 			}
 		}
 	}
@@ -104,8 +104,7 @@ func findMaxLightLoadout(profile *Profile, destinationID string) Loadout {
 func equipLoadout(loadout Loadout, destinationID string, profile *Profile, membershipType int, client *Client) error {
 
 	characters := profile.Characters
-	// TODO: This should swap any items that are currently equipped on other characters
-	// to prepare them to be transferred
+	// Swap any items that are currently equipped on other characters to prepare them to be transferred
 	for bucket, item := range loadout {
 		if item.TransferStatus == ItemIsEquipped && item.Character.CharacterID != destinationID {
 			swapEquippedItem(item, profile, bucket, membershipType, client)
@@ -115,7 +114,7 @@ func equipLoadout(loadout Loadout, destinationID string, profile *Profile, membe
 	// Move all items to the destination character
 	err := moveLoadoutToCharacter(loadout, destinationID, characters, membershipType, client)
 	if err != nil {
-		fmt.Println("Error moving loadout to destination character: ", err.Error())
+		glg.Errorf("Error moving loadout to destination character: %s", err.Error())
 		return err
 	}
 
@@ -140,7 +139,7 @@ func swapEquippedItem(item *Item, profile *Profile, bucket EquipmentBucket, memb
 	if len(reverseLightSortedItems) <= 1 {
 		// TODO: If there are no other items from the specified character, then we need to figure out
 		// an item to be transferred from the vault
-		fmt.Println("No other items on the specified character, not currently setup to transfer new choices from the vault...")
+		glg.Warn("No other items on the specified character, not currently setup to transfer new choices from the vault...")
 		return
 	}
 
@@ -177,7 +176,6 @@ func groupAndSortGear(inventory ItemList) map[EquipmentBucket]ItemList {
 	result[Chest] = sortGearBucket(bucketHashLookup[Chest], inventory)
 	result[Legs] = sortGearBucket(bucketHashLookup[Legs], inventory)
 	result[ClassArmor] = sortGearBucket(bucketHashLookup[ClassArmor], inventory)
-	//result[Artifact] = sortGearBucket(bucketHashLookup[Artifact], inventory)
 
 	return result
 }
@@ -201,20 +199,24 @@ func findBestItemForBucket(bucket EquipmentBucket, items []*Item, destinationID 
 		if next.Power() < candidate.Power() {
 			// Lower light value, keep the current candidate
 			break
+		} else if candidate.IsEquipped && candidate.CharacterID == destinationID {
+			// The current max light piece of gear is currently equipped on the destination character,
+			// avoiding moving items around if we don't need to.
+			break
 		}
 
-		if (next.Character != nil && next.CharacterID == destinationID) &&
-			(candidate.Character != nil && candidate.CharacterID != destinationID) {
+		if (!next.IsInVault() && next.CharacterID == destinationID) &&
+			(!candidate.IsInVault() && candidate.CharacterID != destinationID) {
 			// This next item is the same light and on the destination character already, the current candidate is not
 			candidate = next
-		} else if (next.Character != nil && next.CharacterID == destinationID) &&
-			(candidate.Character != nil && candidate.CharacterID == destinationID) {
+		} else if (!next.IsInVault() && next.CharacterID == destinationID) &&
+			(!candidate.IsInVault() && candidate.CharacterID == destinationID) {
 			if next.TransferStatus == ItemIsEquipped && candidate.TransferStatus != ItemIsEquipped {
-				// The next item is currnetly equipped on the destination character, the current candidate is not
+				// The next item is currently equipped on the destination character, the current candidate is not
 				candidate = next
 			}
-		} else if (candidate.Character != nil && candidate.CharacterID != destinationID) &&
-			(next.Character == nil) {
+		} else if (!candidate.IsInVault() && candidate.CharacterID != destinationID) &&
+			next.IsInVault() {
 			// If the current candidate is on a character that is NOT the destination and the next candidate is in the vault,
 			// prefer that since we will only need to do a single transfer request
 			candidate = next

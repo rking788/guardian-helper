@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/kpango/glg"
 	"github.com/rking788/guardian-helper/bungie"
 	"github.com/rking788/guardian-helper/db"
 	"github.com/rking788/guardian-helper/trials"
@@ -76,14 +77,14 @@ func SaveSession(session *Session) {
 
 	sessionBytes, err := json.Marshal(session)
 	if err != nil {
-		fmt.Println("Couldn't marshal session to string: ", err.Error())
+		glg.Errorf("Couldn't marshal session to string: %s", err.Error())
 		return
 	}
 
 	key := fmt.Sprintf("sessions:%s", session.ID)
 	_, err = conn.Do("SET", key, string(sessionBytes))
 	if err != nil {
-		fmt.Println("Failed to set session: ", err.Error())
+		glg.Errorf("Failed to set session: %s", err.Error())
 	}
 }
 
@@ -97,13 +98,15 @@ func ClearSession(sessionID string) {
 	key := fmt.Sprintf("sessions:%s", sessionID)
 	_, err := conn.Do("DEL", key)
 	if err != nil {
-		fmt.Println("Failed to delete the session from the Redis cache: ", err.Error())
+		glg.Errorf("Failed to delete the session from the Redis cache: %s", err.Error())
 	}
 }
 
 // Handler is the type of function that should be used to respond to a specific intent.
 type Handler func(*skillserver.EchoRequest) *skillserver.EchoResponse
 
+// AuthWrapper is a handler function wrapper that will fail the chain of handlers if an access token was not provided
+// as part of the Alexa request
 func AuthWrapper(handler Handler) Handler {
 
 	return func(req *skillserver.EchoRequest) *skillserver.EchoResponse {
@@ -156,7 +159,7 @@ func CountItem(echoRequest *skillserver.EchoRequest) (response *skillserver.Echo
 	lowerItem := strings.ToLower(item)
 	response, err := bungie.CountItem(lowerItem, accessToken)
 	if err != nil {
-		fmt.Println("Error counting the number of items: ", err.Error())
+		glg.Errorf("Error counting the number of items: %s", err.Error())
 		response = skillserver.NewEchoResponse()
 		response.OutputSpeech("Sorry Guardian, an error occurred counting that item.")
 	}
@@ -182,7 +185,6 @@ func TransferItem(request *skillserver.EchoRequest) (response *skillserver.EchoR
 
 		if tempCount <= 0 {
 			output := fmt.Sprintf("Sorry Guardian, you need to specify a positive, non-zero number to be transferred, not %d", tempCount)
-			fmt.Println(output)
 			response.OutputSpeech(output)
 			return
 		}
@@ -199,8 +201,7 @@ func TransferItem(request *skillserver.EchoRequest) (response *skillserver.EchoR
 		return
 	}
 
-	output := fmt.Sprintf("Transferring %d of your %s from your %s to your %s", count, strings.ToLower(item), strings.ToLower(sourceClass), strings.ToLower(destinationClass))
-	fmt.Println(output)
+	glg.Infof("Transferring %d of your %s from your %s to your %s", count, strings.ToLower(item), strings.ToLower(sourceClass), strings.ToLower(destinationClass))
 	response, err := bungie.TransferItem(strings.ToLower(item), accessToken, strings.ToLower(sourceClass), strings.ToLower(destinationClass), count)
 	if err != nil {
 		response = skillserver.NewEchoResponse()
@@ -216,7 +217,7 @@ func MaxLight(request *skillserver.EchoRequest) (response *skillserver.EchoRespo
 	accessToken := request.Session.User.AccessToken
 	response, err := bungie.EquipMaxLightGear(accessToken)
 	if err != nil {
-		fmt.Println("Error occurred equipping max light: ", err.Error())
+		glg.Errorf("Error occurred equipping max light: %s", err.Error())
 		response = skillserver.NewEchoResponse()
 		response.OutputSpeech("Sorry Guardian, an error occurred equipping your max light gear.")
 	}
@@ -231,7 +232,7 @@ func UnloadEngrams(request *skillserver.EchoRequest) (response *skillserver.Echo
 	accessToken := request.Session.User.AccessToken
 	response, err := bungie.UnloadEngrams(accessToken)
 	if err != nil {
-		fmt.Println("Error occurred unloading engrams: ", err.Error())
+		glg.Errorf("Error occurred unloading engrams: %s", err.Error())
 		response = skillserver.NewEchoResponse()
 		response.OutputSpeech("Sorry Guardian, an error occurred moving your engrams.")
 	}
@@ -245,7 +246,7 @@ func DestinyJoke(request *skillserver.EchoRequest) (response *skillserver.EchoRe
 	response = skillserver.NewEchoResponse()
 	setup, punchline, err := db.GetRandomJoke()
 	if err != nil {
-		fmt.Println("Error loading joke from DB: ", err.Error())
+		glg.Errorf("Error loading joke from DB: %s", err.Error())
 		response.OutputSpeech("Sorry Guardian, I was unable to load a joke right now.")
 		return
 	}

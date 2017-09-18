@@ -2,11 +2,11 @@ package db
 
 import (
 	"errors"
-	"fmt"
 	"os"
 
 	"database/sql"
 
+	"github.com/kpango/glg"
 	_ "github.com/lib/pq" // Only want to import the interface here
 )
 
@@ -34,37 +34,37 @@ func InitDatabase() error {
 
 	db, err := sql.Open("postgres", os.Getenv("DATABASE_URL"))
 	if err != nil {
-		fmt.Println("DB errror: ", err.Error())
+		glg.Errorf("DB errror: %s", err.Error())
 		return err
 	}
 
 	stmt, err := db.Prepare("SELECT item_hash FROM items WHERE item_name = $1 AND item_type_name NOT IN ('Material Exchange', '') ORDER BY max_stack_size DESC LIMIT 1")
 	if err != nil {
-		fmt.Println("DB error: ", err.Error())
+		glg.Errorf("DB error: %s", err.Error())
 		return err
 	}
 	nameFromHashStmt, err := db.Prepare("SELECT item_name FROM items WHERE item_hash = $1 LIMIT 1")
 	if err != nil {
-		fmt.Println("DB prepare error: ", err.Error())
+		glg.Errorf("DB prepare error: %s", err.Error())
 		return err
 	}
 
 	// 8 is the item_type value for engrams
 	engramHashStmt, err := db.Prepare("SELECT item_hash FROM items WHERE item_name LIKE '%engram%'")
 	if err != nil {
-		fmt.Println("DB prepare error: ", err.Error())
+		glg.Errorf("DB prepare error: %s", err.Error())
 		return err
 	}
 
 	itemMetadataStmt, err := db.Prepare("SELECT item_hash, tier_type, class_type, bucket_type_hash FROM items")
 	if err != nil {
-		fmt.Println("DB error: ", err.Error())
+		glg.Errorf("DB error: %s", err.Error())
 		return err
 	}
 
 	randomJokeStmt, err := db.Prepare("SELECT * FROM jokes offset random() * (SELECT COUNT(*) FROM jokes) LIMIT 1")
 	if err != nil {
-		fmt.Println("DB prepare error: ", err.Error())
+		glg.Errorf("DB prepare error: %s", err.Error())
 		return err
 	}
 
@@ -85,10 +85,10 @@ func InitDatabase() error {
 func GetDBConnection() (*LookupDB, error) {
 
 	if db1 == nil {
-		fmt.Println("Initializing db!")
+		glg.Info("Initializing db!")
 		err := InitDatabase()
 		if err != nil {
-			fmt.Println("Failed to initialize the database: ", err.Error())
+			glg.Errorf("Failed to initialize the database: %s", err.Error())
 			return nil, err
 		}
 	}
@@ -153,7 +153,7 @@ func GetItemHashFromName(itemName string) (uint, error) {
 	err = row.Scan(&hash)
 
 	if err == sql.ErrNoRows {
-		fmt.Println("Didn't find any transferrable items with that name: ", itemName)
+		glg.Warnf("Didn't find any transferrable items with that name: %s", itemName)
 		InsertUnknownValueIntoTable(itemName, UnknownItemTable)
 		return 0, errors.New("No items found")
 	} else if err != nil {
@@ -178,7 +178,7 @@ func GetItemNameFromHash(itemHash string) (string, error) {
 	err = row.Scan(&name)
 
 	if err == sql.ErrNoRows {
-		fmt.Println("Didn't find any transferrable items with that hash: ", itemHash)
+		glg.Warnf("Didn't find any transferrable items with that hash: %s", itemHash)
 		return "", errors.New("No items found")
 	} else if err != nil {
 		return "", errors.New(err.Error())

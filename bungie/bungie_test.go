@@ -10,43 +10,97 @@ import (
 
 // NOTE: Never run this while using the bungie.net URLs in bungie/constants.go
 // those should be changed to a localhost webserver that returns static results.
-func BenchmarkSomething(b *testing.B) {
-	b.ReportAllocs()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		//CountItem("strange coins", "aaabbbccc")
-	}
-}
+// func BenchmarkSomething(b *testing.B) {
+
+// 	profileResponse, err := getCurrentProfileResponse()
+// 	if err != nil {
+// 		b.Fail()
+// 		return
+// 	}
+// 	_ = fixupProfileFromProfileResponse(profileResponse)
+
+// 	b.ReportAllocs()
+// 	b.ResetTimer()
+// 	for i := 0; i < b.N; i++ {
+// 		//CountItem("strange coins", "aaabbbccc")
+// 	}
+// }
 
 func BenchmarkFiltering(b *testing.B) {
 	PopulateItemMetadata()
-	items, err := loadItemEndpointResponse()
+	profileResponse, err := getCurrentProfileResponse()
 	if err != nil {
-		b.Fail()
+		b.FailNow()
 		return
 	}
+	profile := fixupProfileFromProfileResponse(profileResponse)
 
+	items := profile.AllItems
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_ = items.Response.Data.Items.FilterItems(itemTierTypeFilter, ExoticTier)
+		_ = items.FilterItems(itemTierTypeFilter, ExoticTier)
 	}
 }
 
 func BenchmarkMaxLight(b *testing.B) {
 	PopulateItemMetadata()
 	PopulateBucketHashLookup()
-	_, err := loadItemEndpointResponse()
+	profileResponse, err := getCurrentProfileResponse()
 	if err != nil {
-		b.Fail()
+		b.FailNow()
 		return
+	}
+	profile := fixupProfileFromProfileResponse(profileResponse)
+	testDestinationID := profile.Characters[0].CharacterID
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		findMaxLightLoadout(profile, testDestinationID)
+	}
+}
+
+func BenchmarkGroupAndSort(b *testing.B) {
+	response, err := getCurrentProfileResponse()
+	if err != nil {
+		b.FailNow()
+	}
+	profile := fixupProfileFromProfileResponse(response)
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		profile := groupAndSortGear(profile.AllItems)
+		if profile == nil {
+			b.FailNow()
+		}
+	}
+}
+
+func BenchmarkBestItemForBucket(b *testing.B) {
+	response, err := getCurrentProfileResponse()
+	if err != nil {
+		b.FailNow()
+	}
+	profile := fixupProfileFromProfileResponse(response)
+	grouped := groupAndSortGear(profile.AllItems)
+	largestBucket := Kinetic
+	largestBucketSize := len(grouped[Kinetic])
+	for bkt, list := range grouped {
+		if len(list) > largestBucketSize {
+			largestBucket = bkt
+			largestBucketSize = len(list)
+		}
 	}
 
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		// TODO: Fix this benchmark
-		//findMaxLightLoadout(itemsResponse, "")
+		item := findBestItemForBucket(largestBucket, grouped[largestBucket], profile.Characters[0].CharacterID)
+		if item == nil {
+			b.FailNow()
+		}
 	}
 }
 
@@ -176,28 +230,4 @@ func readSample(name string) ([]byte, error) {
 	}
 
 	return ioutil.ReadAll(f)
-}
-
-func loadItemEndpointResponse() (*D1ItemsEndpointResponse, error) {
-
-	f, err := os.Open("../local_tools/samples/get_all_items_summary-latest.json")
-	if err != nil {
-		fmt.Println("Cannot read local all items response!!: ", err.Error())
-		return nil, err
-	}
-
-	b, err := ioutil.ReadAll(f)
-	if err != nil {
-		fmt.Println("Failed to read local all items response!!: ", err.Error())
-		return nil, err
-	}
-
-	var response D1ItemsEndpointResponse
-	err = json.Unmarshal(b, &response)
-	if err != nil {
-		fmt.Println("Error unmarshal-ing the all items response!!: ", err.Error())
-		return nil, err
-	}
-
-	return &response, nil
 }

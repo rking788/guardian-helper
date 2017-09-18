@@ -2,17 +2,13 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"net/http"
-	"net/http/httputil"
 	"os"
 	"time"
 
-	"github.com/rking788/guardian-helper/bungie"
-
+	"github.com/kpango/glg"
 	"github.com/rking788/guardian-helper/alexa"
 
-	"github.com/gin-gonic/gin"
 	"github.com/mikeflynn/go-alexa/skillserver"
 )
 
@@ -51,26 +47,16 @@ var (
 
 var memprofile = flag.String("memprofile", "", "write memory profile to this file")
 
+func init() {
+	ConfigureLogging()
+}
+
 func main() {
 
 	flag.Parse()
 	port := os.Getenv("PORT")
 
-	err := bungie.PopulateEngramHashes()
-	if err != nil {
-		fmt.Printf("Error populating engram hashes: %s\nExiting...", err.Error())
-		return
-	}
-	err = bungie.PopulateBucketHashLookup()
-	if err != nil {
-		fmt.Printf("Error populating bucket hash values: %s\nExiting...", err.Error())
-		return
-	}
-	err = bungie.PopulateItemMetadata()
-	if err != nil {
-		fmt.Printf("Error populating item metadata lookup table: %s\nExiting...", err.Error())
-		return
-	}
+	defer CloseLogger()
 
 	//bungie.EquipMaxLightGear("access-token")
 
@@ -91,11 +77,9 @@ func main() {
 	// 	}
 	// }()
 
-	fmt.Println(fmt.Sprintf("Start listening on port(%s)", port))
-	//err = skillserver.RunSSL(Applications, port, "/etc/letsencrypt/live/warmind.network/fullchain.pem", "/etc/letsencrypt/live/warmind.network/privkey.pem")
-	skillserver.Run(Applications, port)
+	err := skillserver.RunSSL(Applications, port, "/etc/letsencrypt/live/warmind.network/fullchain.pem", "/etc/letsencrypt/live/warmind.network/privkey.pem")
 	if err != nil {
-		fmt.Println("Error starting the application!: ", err.Error())
+		glg.Errorf("Error starting the application!: %s", err.Error())
 	}
 }
 
@@ -119,7 +103,7 @@ func EchoIntentHandler(echoRequest *skillserver.EchoRequest, echoResponse *skill
 	// Time the intent handler to determine if it is taking longer than normal
 	startTime := time.Now()
 	defer func(start time.Time) {
-		fmt.Printf("IntentHandler execution time: %v\n", time.Since(start))
+		glg.Infof("IntentHandler execution time: %v", time.Since(start))
 	}(startTime)
 
 	var response *skillserver.EchoResponse
@@ -130,7 +114,7 @@ func EchoIntentHandler(echoRequest *skillserver.EchoRequest, echoResponse *skill
 
 	intentName := echoRequest.GetIntentName()
 
-	fmt.Printf("Launching with RequestType: %s, IntentName: %s\n", echoRequest.GetRequestType(), intentName)
+	glg.Infof("RequestType: %s, IntentName: %s", echoRequest.GetRequestType(), intentName)
 
 	handler, ok := AlexaHandlers[intentName]
 	if echoRequest.GetRequestType() == "LaunchRequest" {
@@ -153,13 +137,13 @@ func EchoIntentHandler(echoRequest *skillserver.EchoRequest, echoResponse *skill
 	*echoResponse = *response
 }
 
-func dumpRequest(ctx *gin.Context) {
+// func dumpRequest(ctx *gin.Context) {
 
-	data, err := httputil.DumpRequest(ctx.Request, true)
-	if err != nil {
-		fmt.Println("Failed to dump the request: ", err.Error())
-		return
-	}
+// 	data, err := httputil.DumpRequest(ctx.Request, true)
+// 	if err != nil {
+// 		glg.Errorf("Failed to dump the request: %s", err.Error())
+// 		return
+// 	}
 
-	fmt.Println(string(data))
-}
+// 	glg.Debug(string(data))
+// }
