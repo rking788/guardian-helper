@@ -128,18 +128,24 @@ const (
 // Alexa doesn't understand some of the dsetiny items or splits them into separate words
 // This will allow us to translate to the correct name before doing the lookup.
 var commonAlexaItemTranslations = map[string]string{
-	"spin metal":     "spinmetal",
-	"spin mental":    "spinmetal",
-	"passage coins":  "passage coin",
-	"strange coins":  "strange coin",
-	"exotic shards":  "exotic shard",
-	"worm spore":     "wormspore",
-	"3 of coins":     "three of coins",
-	"worms for":      "wormspore",
-	"worm for":       "wormspore",
-	"motes":          "mote of light",
-	"motes of light": "mote of light",
-	"spin middle":    "spinmetal",
+	"spin metal":        "spinmetal",
+	"spin mental":       "spinmetal",
+	"passage coins":     "passage coin",
+	"strange coins":     "strange coin",
+	"exotic shards":     "exotic shard",
+	"worm spore":        "wormspore",
+	"3 of coins":        "three of coins",
+	"worms for":         "wormspore",
+	"worm for":          "wormspore",
+	"motes":             "mote of light",
+	"motes of light":    "mote of light",
+	"spin middle":       "spinmetal",
+	"e d.s that tokens": "edz token",
+	"e.d.z token":       "edz token",
+	"e.d.z tokens":      "edz token",
+	"edz tokens":        "edz token",
+	"edc token":         "edz token",
+	"edc tokens":        "edz token",
 }
 
 var commonAlexaClassNameTrnaslations = map[string]string{
