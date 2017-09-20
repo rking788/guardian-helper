@@ -6,31 +6,43 @@ import (
 	"github.com/kpango/glg"
 )
 
+// log level constants to determine which labels to enable and which to disable
 const (
-	// TODO: This stuff should be passed in via a config object.
-	// DebugLog indicates if debug logs should be included in the logging output. True if it should; False otherwise.
-	DebugLog = true
-	// LogFilename is the file where logs should be written on disk. This should be correctly configured with logrotate.
-	LogFilename = "/var/log/warmind-network.log"
+	all uint = iota
+	debug
+	info
+	warning
+	err
 )
 
 var infolog *os.File
 
 // ConfigureLogging will setup the glg logging package with the correct file destination
 // coloring, etc. as desired for the entire application.
-func ConfigureLogging() {
-	infolog = glg.FileWriter(LogFilename, 0644)
+func ConfigureLogging(level string, logPath string) {
+
+	if logPath != "" {
+		infolog = glg.FileWriter(logPath, 0644)
+		glg.Get().AddWriter(infolog)
+	}
 
 	glg.Get().
 		SetMode(glg.BOTH).
 		EnableColor().
-		AddWriter(infolog).
 		SetLevelMode(glg.LOG, glg.NONE)
 
-	if DebugLog == false {
-		// Disable debug and info logs if we don't want them.
-		glg.Get().
-			SetLevelMode(glg.DEBG, glg.NONE)
+	// Map the config log level value to an internal representation that is easier
+	// to perform equality operations on.
+	desiredLevel := map[string]uint{
+		"all":     all,
+		"debug":   debug,
+		"info":    info,
+		"warning": warning,
+		"error":   err,
+	}[level]
+
+	for _, glgLevel := range []string{glg.DEBG, glg.INFO, glg.WARN, glg.ERR} {
+		glg.Get().SetLevelMode(glgLevel, glgDestination(glgLevel, desiredLevel))
 	}
 
 	//glg.Info("info")
@@ -52,6 +64,36 @@ func ConfigureLogging() {
 	// glg.Printf("%s : %s", "printf", "formatted")
 }
 
+func glgDestination(glgLevel string, desiredLevel uint) int {
+
+	// Special case where we want ALL logging.
+	if desiredLevel == all {
+		return glg.BOTH
+	}
+
+	enabled := false
+	switch glgLevel {
+	case glg.DEBG:
+		enabled = desiredLevel <= debug
+	case glg.INFO:
+		enabled = desiredLevel <= info
+	case glg.WARN:
+		enabled = desiredLevel <= warning
+	case glg.ERR:
+		enabled = desiredLevel <= err
+	}
+
+	// NOTE: Currently does not support sending log to ONLY the Writer,
+	// needs to be all or nothing right now
+	if enabled {
+		return glg.BOTH
+	}
+	return glg.NONE
+}
+
+// CloseLogger is responsible for closing any resources used for logging.
 func CloseLogger() {
-	infolog.Close()
+	if infolog != nil {
+		infolog.Close()
+	}
 }

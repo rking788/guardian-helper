@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"os"
 	"sort"
 	"strconv"
 	"sync"
@@ -21,6 +20,20 @@ const (
 	TransferDelay = 750 * time.Millisecond
 )
 
+// Equipment bucket type definitions
+const (
+	Kinetic EquipmentBucket = iota
+	Energy
+	Power
+	Ghost
+	Helmet
+	Gauntlets
+	Chest
+	Legs
+	ClassArmor
+	Artifact
+)
+
 var (
 	// Clients stores a list of bungie.Client instances that can be used to make HTTP requests to the Bungie API
 	Clients = NewClientPool()
@@ -28,6 +41,29 @@ var (
 
 var engramHashes map[uint]bool
 var itemMetadata map[uint]*ItemMetadata
+var bucketHashLookup map[EquipmentBucket]uint
+var bungieAPIKey string
+
+// InitEnv provides a package level initialization point for any work that is environment specific
+func InitEnv(apiKey string) {
+	bungieAPIKey = apiKey
+
+	err := PopulateEngramHashes()
+	if err != nil {
+		glg.Errorf("Error populating engram hashes: %s\nExiting...", err.Error())
+		return
+	}
+	err = PopulateBucketHashLookup()
+	if err != nil {
+		glg.Errorf("Error populating bucket hash values: %s\nExiting...", err.Error())
+		return
+	}
+	err = PopulateItemMetadata()
+	if err != nil {
+		glg.Errorf("Error populating item metadata lookup table: %s\nExiting...", err.Error())
+		return
+	}
+}
 
 // EquipmentBucket is the type of the key for the bucket type hash lookup
 type EquipmentBucket uint
@@ -57,41 +93,6 @@ func (bucket EquipmentBucket) String() string {
 	}
 
 	return ""
-}
-
-// Equipment bucket type definitions
-const (
-	Kinetic EquipmentBucket = iota
-	Energy
-	Power
-	Ghost
-	Helmet
-	Gauntlets
-	Chest
-	Legs
-	ClassArmor
-	Artifact
-)
-
-var bucketHashLookup map[EquipmentBucket]uint
-
-func init() {
-
-	err := PopulateEngramHashes()
-	if err != nil {
-		glg.Errorf("Error populating engram hashes: %s\nExiting...", err.Error())
-		return
-	}
-	err = PopulateBucketHashLookup()
-	if err != nil {
-		glg.Errorf("Error populating bucket hash values: %s\nExiting...", err.Error())
-		return
-	}
-	err = PopulateItemMetadata()
-	if err != nil {
-		glg.Errorf("Error populating item metadata lookup table: %s\nExiting...", err.Error())
-		return
-	}
 }
 
 // PopulateEngramHashes will intialize the map holding all item_hash values that represent engram types.
@@ -167,7 +168,7 @@ func CountItem(itemName, accessToken string) (*skillserver.EchoResponse, error) 
 	response := skillserver.NewEchoResponse()
 
 	client := Clients.Get()
-	client.AddAuthValues(accessToken, os.Getenv("BUNGIE_API_KEY"))
+	client.AddAuthValues(accessToken, bungieAPIKey)
 
 	// Load all items on all characters
 	profileChannel := make(chan *ProfileMsg)
@@ -222,7 +223,7 @@ func TransferItem(itemName, accessToken, sourceClass, destinationClass string, c
 	response := skillserver.NewEchoResponse()
 
 	client := Clients.Get()
-	client.AddAuthValues(accessToken, os.Getenv("BUNGIE_API_KEY"))
+	client.AddAuthValues(accessToken, bungieAPIKey)
 
 	profileChannel := make(chan *ProfileMsg)
 	go GetProfileForCurrentUser(client, profileChannel)
@@ -291,7 +292,7 @@ func EquipMaxLightGear(accessToken string) (*skillserver.EchoResponse, error) {
 	response := skillserver.NewEchoResponse()
 
 	client := Clients.Get()
-	client.AddAuthValues(accessToken, os.Getenv("BUNGIE_API_KEY"))
+	client.AddAuthValues(accessToken, bungieAPIKey)
 
 	profileChannel := make(chan *ProfileMsg)
 	go GetProfileForCurrentUser(client, profileChannel)
@@ -327,7 +328,7 @@ func UnloadEngrams(accessToken string) (*skillserver.EchoResponse, error) {
 	response := skillserver.NewEchoResponse()
 
 	client := Clients.Get()
-	client.AddAuthValues(accessToken, os.Getenv("BUNGIE_API_KEY"))
+	client.AddAuthValues(accessToken, bungieAPIKey)
 
 	profileChannel := make(chan *ProfileMsg)
 	go GetProfileForCurrentUser(client, profileChannel)

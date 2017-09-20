@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"os"
 	"sort"
 
 	"time"
@@ -24,6 +23,13 @@ const (
 	// RequestOrigin will be used in the Origin header when making requests to Trials Report
 	RequestOrigin = "https://guardian-helper.herokuapp.com"
 )
+
+var bungieAPIKey string
+
+// InitEnv provides a package level initialization point for any work that is environment specific
+func InitEnv(apiKey string) {
+	bungieAPIKey = apiKey
+}
 
 // CurrentMap represents the metadata describing the current active map in Trials of Osiris
 type CurrentMap struct {
@@ -164,7 +170,7 @@ func GetCurrentWeek(token string) (*skillserver.EchoResponse, error) {
 func findMembershipID(token string) (string, error) {
 
 	client := bungie.Clients.Get()
-	client.AddAuthValues(token, os.Getenv("BUNGIE_API_KEY"))
+	client.AddAuthValues(token, bungieAPIKey)
 	currentAccount, err := client.GetCurrentAccount()
 	if err != nil {
 		glg.Errorf("Error loading current account info from Bungie.net: %s", err.Error())

@@ -6,7 +6,6 @@ package alexa
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 	"strconv"
 	"time"
 
@@ -32,9 +31,12 @@ type Session struct {
 	Quantity             int
 }
 
-var (
-	redisConnPool = newRedisPool(os.Getenv("REDIS_URL"))
-)
+var redisConnPool *redis.Pool
+
+// InitEnv provides a package level initialization point for any work that is environment specific
+func InitEnv(redisURL string) {
+	redisConnPool = newRedisPool(redisURL)
+}
 
 // Redis related functions
 

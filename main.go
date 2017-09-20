@@ -2,30 +2,21 @@ package main
 
 import (
 	"flag"
+	"log"
 	"net/http"
 	"os"
+	"os/signal"
+	"runtime/pprof"
 	"time"
+
+	"github.com/rking788/guardian-helper/db"
+	"github.com/rking788/guardian-helper/trials"
 
 	"github.com/kpango/glg"
 	"github.com/rking788/guardian-helper/alexa"
+	"github.com/rking788/guardian-helper/bungie"
 
 	"github.com/mikeflynn/go-alexa/skillserver"
-)
-
-// Applications is a definition of the Alexa applications running on this server.
-var (
-	Applications = map[string]interface{}{
-		"/echo/guardian-helper": skillserver.EchoApplication{ // Route
-			AppID:          os.Getenv("ALEXA_APP_ID"), // Echo App ID from Amazon Dashboard
-			OnIntent:       EchoIntentHandler,
-			OnLaunch:       EchoIntentHandler,
-			OnSessionEnded: EchoSessionEndedHandler,
-		},
-		"/health": skillserver.StdApplication{
-			Methods: "GET",
-			Handler: healthHandler,
-		},
-	}
 )
 
 // AlexaHandlers are the handler functions mapped by the intent name that they should handle.
@@ -45,46 +36,92 @@ var (
 	}
 )
 
+var configPath = flag.String("config", "", "path to the environment configuration file")
 var memprofile = flag.String("memprofile", "", "write memory profile to this file")
 
-func init() {
-	ConfigureLogging()
+// Applications is a definition of the Alexa applications running on this server.
+var applications map[string]interface{}
+
+// config is the environment configuration for this specific deployment of the server
+var config *EnvConfig
+
+// InitEnv is responsible for initializing all components (including sub-packages) that depend on a specific
+// deployment environment configuration.
+func InitEnv(c *EnvConfig) {
+	applications = map[string]interface{}{
+		"/echo/guardian-helper": skillserver.EchoApplication{ // Route
+			AppID:          c.AlexaAppID, // Echo App ID from Amazon Dashboard
+			OnIntent:       EchoIntentHandler,
+			OnLaunch:       EchoIntentHandler,
+			OnSessionEnded: EchoSessionEndedHandler,
+		},
+		"/health": skillserver.StdApplication{
+			Methods: "GET",
+			Handler: healthHandler,
+		},
+	}
+
+	ConfigureLogging(c.LogLevel, c.LogFilePath)
+
+	// This provides and explicit configuration point as opposed to the package level init functions,
+	// as well as making it easier to write unit tests.
+	// It also makes it easier to guarantee ordering if that is necessary.
+	trials.InitEnv(c.BungieAPIKey)
+	db.InitEnv(c.DatabaseURL)
+	alexa.InitEnv(c.RedisURL)
+	bungie.InitEnv(c.BungieAPIKey)
 }
 
 func main() {
 
 	flag.Parse()
-	port := os.Getenv("PORT")
+
+	config = loadConfig(configPath)
+
+	glg.Infof("Loaded config : %+v\n", config)
+	InitEnv(config)
 
 	defer CloseLogger()
 
-	//bungie.EquipMaxLightGear("access-token")
+	// writeHeapProfile()
 
-	// c := make(chan os.Signal, 1)
-	// signal.Notify(c, os.Interrupt)
-	// go func() {
-	// 	for _ = range c {
-	// 		if *memprofile != "" {
-	// 			f, err := os.Create(*memprofile)
-	// 			if err != nil {
-	// 				log.Fatal(err)
-	// 			}
-	// 			pprof.WriteHeapProfile(f)
-	// 			f.Close()
-	// 			os.Exit(1)
-	// 			return
-	// 		}
-	// 	}
-	// }()
-
-	err := skillserver.RunSSL(Applications, port, "/etc/letsencrypt/live/warmind.network/fullchain.pem", "/etc/letsencrypt/live/warmind.network/privkey.pem")
-	if err != nil {
-		glg.Errorf("Error starting the application!: %s", err.Error())
+	if config.Environment == "production" {
+		port := ":443"
+		err := skillserver.RunSSL(applications, port, config.SSLCertPath, config.SSLKeyPath)
+		if err != nil {
+			glg.Errorf("Error starting the application! : %s", err.Error())
+		}
+	} else {
+		// Heroku makes us read a random port from the environment and our app is a
+		// subdomain of theirs so we get SSL for free
+		port := os.Getenv("PORT")
+		skillserver.Run(applications, port)
 	}
 }
 
 func healthHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Up"))
+}
+
+func writeHeapProfile() {
+	bungie.EquipMaxLightGear("access-token")
+
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	go func() {
+		for _ = range c {
+			if *memprofile != "" {
+				f, err := os.Create(*memprofile)
+				if err != nil {
+					log.Fatal(err)
+				}
+				pprof.WriteHeapProfile(f)
+				f.Close()
+				os.Exit(1)
+				return
+			}
+		}
+	}()
 }
 
 // Alexa skill related functions

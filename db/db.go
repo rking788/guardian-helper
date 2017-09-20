@@ -2,12 +2,18 @@ package db
 
 import (
 	"errors"
-	"os"
 
 	"database/sql"
 
 	"github.com/kpango/glg"
 	_ "github.com/lib/pq" // Only want to import the interface here
+)
+
+const (
+	// UnknownClassTable is the name of the table that will hold all the unknown class values provided by Alexa
+	UnknownClassTable = "unknown_classes"
+	// UnknownItemTable is the name of the table that will hold the unknown item name values passed by Alexa
+	UnknownItemTable = "unknown_items"
 )
 
 type LookupDB struct {
@@ -20,19 +26,18 @@ type LookupDB struct {
 }
 
 var db1 *LookupDB
+var dbURL string
 
-const (
-	// UnknownClassTable is the name of the table that will hold all the unknown class values provided by Alexa
-	UnknownClassTable = "unknown_classes"
-	// UnknownItemTable is the name of the table that will hold the unknown item name values passed by Alexa
-	UnknownItemTable = "unknown_items"
-)
+// InitEnv provides a package level initialization point for any work that is environment specific
+func InitEnv(url string) {
+	dbURL = url
+}
 
 // InitDatabase is in charge of preparing any Statements that will be commonly used as well
 // as setting up the database connection pool.
 func InitDatabase() error {
 
-	db, err := sql.Open("postgres", os.Getenv("DATABASE_URL"))
+	db, err := sql.Open("postgres", dbURL)
 	if err != nil {
 		glg.Errorf("DB errror: %s", err.Error())
 		return err
