@@ -83,6 +83,8 @@ func main() {
 
 	defer CloseLogger()
 
+	glg.Printf("Version=%s, BuildDate=%v", Version, BuildDate)
+
 	// writeHeapProfile()
 
 	if config.Environment == "production" {

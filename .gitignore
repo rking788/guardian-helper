@@ -5,3 +5,4 @@ guardian-helper
 *.mprof
 *.prof
 *.test
+coverage.out

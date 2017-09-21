@@ -1,0 +1,16 @@
+language: go
+
+go:
+    - tip
+
+branches:
+    only:
+        - master
+        - staging
+        - devel
+
+install:
+    go get -u -v ./...
+
+script:
+    - make build

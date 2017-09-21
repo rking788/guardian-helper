@@ -34,10 +34,8 @@ const (
 	Artifact
 )
 
-var (
-	// Clients stores a list of bungie.Client instances that can be used to make HTTP requests to the Bungie API
-	Clients = NewClientPool()
-)
+// Clients stores a list of bungie.Client instances that can be used to make HTTP requests to the Bungie API
+var Clients *ClientPool
 
 var engramHashes map[uint]bool
 var itemMetadata map[uint]*ItemMetadata
@@ -47,6 +45,8 @@ var bungieAPIKey string
 // InitEnv provides a package level initialization point for any work that is environment specific
 func InitEnv(apiKey string) {
 	bungieAPIKey = apiKey
+
+	Clients = NewClientPool()
 
 	err := PopulateEngramHashes()
 	if err != nil {
