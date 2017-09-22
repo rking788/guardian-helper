@@ -37,6 +37,11 @@ const (
 // Clients stores a list of bungie.Client instances that can be used to make HTTP requests to the Bungie API
 var Clients *ClientPool
 
+// It is probably faster to just load all of the item_name->item_hash lookups into memory.
+// That way we can give feedback to the user quicker if an item name is not found.
+// If memory overhead becomes an issue this can be removed and go back to the DB lookups.
+var itemHashLookup map[string]uint
+
 var engramHashes map[uint]bool
 var itemMetadata map[uint]*ItemMetadata
 var bucketHashLookup map[EquipmentBucket]uint
@@ -123,12 +128,19 @@ func PopulateItemMetadata() error {
 	defer rows.Close()
 
 	itemMetadata = make(map[uint]*ItemMetadata)
+	itemHashLookup = make(map[string]uint)
 	for rows.Next() {
 		var hash uint
+		var itemName string
 		itemMeta := ItemMetadata{}
-		rows.Scan(&hash, &itemMeta.TierType, &itemMeta.ClassType, &itemMeta.BucketHash)
+		rows.Scan(&hash, &itemName, &itemMeta.TierType, &itemMeta.ClassType, &itemMeta.BucketHash)
 
 		itemMetadata[hash] = &itemMeta
+		if itemName != "" {
+			itemHashLookup[itemName] = hash
+		} else {
+			glg.Warn("Found an empty item name, skipping...")
+		}
 	}
 	if rows.Err() != nil {
 		return rows.Err()
@@ -164,8 +176,23 @@ func PopulateBucketHashLookup() error {
 // CountItem will count the number of the specified item and return an EchoResponse
 // that can be serialized and sent back to the Alexa skill.
 func CountItem(itemName, accessToken string) (*skillserver.EchoResponse, error) {
+	glg.Infof("ItemName: %s", itemName)
 
 	response := skillserver.NewEchoResponse()
+
+	// Check common misinterpretations from Alexa
+	if translation, ok := commonAlexaItemTranslations[itemName]; ok {
+		itemName = translation
+	}
+
+	// hash, err := db.GetItemHashFromName(itemName)
+	// if err != nil {
+	hash, ok := itemHashLookup[itemName]
+	if !ok {
+		outputStr := fmt.Sprintf("Sorry Guardian, I could not find any items named %s in your inventory.", itemName)
+		response.OutputSpeech(outputStr)
+		return response, nil
+	}
 
 	client := Clients.Get()
 	client.AddAuthValues(accessToken, bungieAPIKey)
@@ -173,18 +200,6 @@ func CountItem(itemName, accessToken string) (*skillserver.EchoResponse, error) 
 	// Load all items on all characters
 	profileChannel := make(chan *ProfileMsg)
 	go GetProfileForCurrentUser(client, profileChannel)
-
-	// Check common misinterpretations from Alexa
-	if translation, ok := commonAlexaItemTranslations[itemName]; ok {
-		itemName = translation
-	}
-
-	hash, err := db.GetItemHashFromName(itemName)
-	if err != nil {
-		outputStr := fmt.Sprintf("Sorry Guardian, I could not find any items named %s in your inventory.", itemName)
-		response.OutputSpeech(outputStr)
-		return response, nil
-	}
 
 	msg, _ := <-profileChannel
 	if msg.error != nil {
@@ -220,13 +235,9 @@ func CountItem(itemName, accessToken string) (*skillserver.EchoResponse, error) 
 // as well as the source class. If no quantity is specified, all of the specific
 // items will be transfered to the particular character.
 func TransferItem(itemName, accessToken, sourceClass, destinationClass string, count int) (*skillserver.EchoResponse, error) {
+	glg.Infof("ItemName: %s, Source: %s, Destination: %s, Count: %d", itemName, sourceClass, destinationClass, count)
+
 	response := skillserver.NewEchoResponse()
-
-	client := Clients.Get()
-	client.AddAuthValues(accessToken, bungieAPIKey)
-
-	profileChannel := make(chan *ProfileMsg)
-	go GetProfileForCurrentUser(client, profileChannel)
 
 	// Check common misinterpretations from Alexa
 	if translation, ok := commonAlexaItemTranslations[itemName]; ok {
@@ -239,17 +250,25 @@ func TransferItem(itemName, accessToken, sourceClass, destinationClass string, c
 		sourceClass = translation
 	}
 
-	hash, err := db.GetItemHashFromName(itemName)
-	if err != nil {
+	//hash, err := db.GetItemHashFromName(itemName)
+	//if err != nil {
+	hash, ok := itemHashLookup[itemName]
+	if !ok {
 		outputStr := fmt.Sprintf("Sorry Guardian, I could not find any items named %s in your inventory.", itemName)
 		response.OutputSpeech(outputStr)
 		return response, nil
 	}
 
+	client := Clients.Get()
+	client.AddAuthValues(accessToken, bungieAPIKey)
+
+	profileChannel := make(chan *ProfileMsg)
+	go GetProfileForCurrentUser(client, profileChannel)
+
 	msg := <-profileChannel
 	if msg.error != nil {
-		glg.Errorf("Failed to read the Items response from Bungie!: %s", err.Error())
-		return nil, err
+		glg.Errorf("Failed to read the Items response from Bungie!: %s", msg.error.Error())
+		return nil, msg.error
 	}
 
 	matchingItems := msg.Profile.AllItems.FilterItems(itemHashFilter, hash)

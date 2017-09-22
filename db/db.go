@@ -61,7 +61,7 @@ func InitDatabase() error {
 		return err
 	}
 
-	itemMetadataStmt, err := db.Prepare("SELECT item_hash, tier_type, class_type, bucket_type_hash FROM items")
+	itemMetadataStmt, err := db.Prepare("SELECT item_hash, item_name, tier_type, class_type, bucket_type_hash FROM items")
 	if err != nil {
 		glg.Errorf("DB error: %s", err.Error())
 		return err
@@ -145,7 +145,7 @@ func LoadItemMetadata() (*sql.Rows, error) {
 
 // GetItemHashFromName is in charge of querying the database and reading
 // the item hash value for the given item name.
-func GetItemHashFromName(itemName string) (uint, error) {
+func GetItemHashFromName_old(itemName string) (uint, error) {
 
 	db, err := GetDBConnection()
 	if err != nil {
