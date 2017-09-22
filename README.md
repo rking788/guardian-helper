@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/rking788/guardian-helper.svg?branch=master)](https://travis-ci.org/Rking788/guardian-helper)
+[![Build Status](https://travis-ci.org/rking788/guardian-helper.svg?branch=master)](https://travis-ci.org/rking788/guardian-helper)
 
 Guardian Helper
 =================

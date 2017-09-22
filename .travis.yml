@@ -1,16 +1,17 @@
 language: go
-
 go:
-    - tip
-
+- tip
 branches:
-    only:
-        - master
-        - staging
-        - devel
-
-install:
-    go get -u -v ./...
-
+  only:
+  - master
+  - staging
+  - devel
+install: go get -u -v ./...
 script:
-    - make build
+- make build
+deploy:
+  provider: heroku
+  api_key:
+    secure: w5iNPqhWG1cqq3nryj3n3VhKsxlh33Bth7VlZHINTYs85IKUy7uF91loXbV1cIIqDMhQLS/ca0NKjNYkHadx6yS6LkiLrr+uQT7jo/tmSu71UQAt/OpvVfC8Jsaib38jg1lH15z4ckWbS3L6cCdP52U7O1z46/MfatSQevXRlXZjIQ6tBh1AlWNMtUr0YTDTw81k1biTlm6BHp3j0lpuwzswkSsTakz/2RfIqr+TKiM/verOmddcoGcePgWos2l1ahb59fdonF+4a4jwJGHZMyccx0CMFBG6h0pBU3/Lw7ykCXtUonD5LRQeFZOXmBghmSV9f5/5FlWfne7ceqXA60wHLcdi/XPftvySILmQNETfKZSmo0aIdVySKKOScSGNZYpcq43uKcna1JvgNYOT8I5xGDhtF6BnqExxUij0h89ge0gqroI/90D8iTn7gYyM5cCB5KUCyJYAJQZ+dEddZ2h+08LnYJGeysWkq5YZDDkYUK1hUjP4t32NK2nfg0BgSE4TMcFtavC+nu+NIHj01WykCfoiu5s7awD7+JPH549EfViAuVMEr0Uf0+lpbWuK5LkNHAW/hClDKZPqz+JrAtVM6fkvFxqwL+X6cgDn9ghKQpTU4geLvsDymC9JDB22/vWELF0Iypo6Wb7O8pD7BUvVERnKbQjq4PI5PQYytAI=
+  app: guardian-helper
+  on: staging
