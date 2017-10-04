@@ -17,7 +17,7 @@ import (
 	"strings"
 
 	"github.com/garyburd/redigo/redis"
-	"github.com/mikeflynn/go-alexa/skillserver"
+	"github.com/rking788/go-alexa/skillserver"
 )
 
 // Session is responsible for storing information related to a specific skill invocation.
@@ -214,7 +214,8 @@ func TransferItem(request *skillserver.EchoRequest) (response *skillserver.EchoR
 	return
 }
 
-func MaxLight(request *skillserver.EchoRequest) (response *skillserver.EchoResponse) {
+// MaxPower will equip the loadout on the current character that provides the maximum amount of power.
+func MaxPower(request *skillserver.EchoRequest) (response *skillserver.EchoResponse) {
 
 	accessToken := request.Session.User.AccessToken
 	response, err := bungie.EquipMaxLightGear(accessToken)
@@ -258,6 +259,64 @@ func DestinyJoke(request *skillserver.EchoRequest) (response *skillserver.EchoRe
 		AppendBreak("2s", "medium", "").
 		AppendPlainSpeech(punchline)
 	response.OutputSpeechSSML(builder.Build())
+
+	return
+}
+
+// CreateLoadout will determine the user's current character and create a new loadout based on
+// their currently equipped items. This loadout is then serialized and persisted to a
+// persistent store.
+func CreateLoadout(request *skillserver.EchoRequest) (response *skillserver.EchoResponse) {
+
+	response = skillserver.NewEchoResponse()
+
+	// STARTED, IN_PROGRESS, COMPLETED
+	glg.Debugf("Found dialog state = %s", request.GetDialogState())
+	if request.GetDialogState() != skillserver.DialogCompleted {
+		// The user still needs to provide a name for the new loadout to be created
+		response.DialogDelegate(nil)
+		return
+	}
+
+	glg.Debugf("Found intent confirmation status = %s", request.GetIntentConfirmationStatus())
+	intentConfirmation := request.GetIntentConfirmationStatus()
+	if intentConfirmation == "DENIED" {
+		// The user does NOT want to overwrite the existing loadout with the same name
+		return
+	}
+
+	accessToken := request.Session.User.AccessToken
+	loadoutName, _ := request.GetSlotValue("Name")
+	if loadoutName == "" {
+		response.OutputSpeech("Sorry Guardian, you must specify a name for the loadout being saved.")
+	}
+
+	var err error
+	response, err = bungie.CreateLoadoutForCurrentCharacter(accessToken, loadoutName,
+		intentConfirmation == "CONFIRMED")
+
+	if err != nil {
+		glg.Errorf("Error occurred creating loadout: %s", err.Error())
+		response.OutputSpeech("Sorry Guardian, an error occurred saving your loadout.")
+	}
+
+	return
+}
+
+func EquipNamedLoadout(request *skillserver.EchoRequest) (response *skillserver.EchoResponse) {
+
+	accessToken := request.Session.User.AccessToken
+	loadoutName, _ := request.GetSlotValue("Name")
+	if loadoutName == "" {
+		response.OutputSpeech("Sorry Guardian, you must specify a name for the loadout being equipped.")
+	}
+
+	response, err := bungie.EquipNamedLoadout(accessToken, loadoutName)
+
+	if err != nil {
+		glg.Errorf("Error occurred creating loadout: %s", err.Error())
+		response.OutputSpeech("Sorry Guardian, an error occurred equipping your loadout.")
+	}
 
 	return
 }

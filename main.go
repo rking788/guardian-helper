@@ -16,7 +16,7 @@ import (
 	"github.com/rking788/guardian-helper/alexa"
 	"github.com/rking788/guardian-helper/bungie"
 
-	"github.com/mikeflynn/go-alexa/skillserver"
+	"github.com/rking788/go-alexa/skillserver"
 )
 
 // AlexaHandlers are the handler functions mapped by the intent name that they should handle.
@@ -30,8 +30,10 @@ var (
 		"TrialsPopularWeaponTypes": alexa.PopularWeaponTypes,
 		"TrialsPersonalTopWeapons": alexa.AuthWrapper(alexa.PersonalTopWeapons),
 		"UnloadEngrams":            alexa.AuthWrapper(alexa.UnloadEngrams),
-		"EquipMaxLight":            alexa.AuthWrapper(alexa.MaxLight),
+		"EquipMaxLight":            alexa.AuthWrapper(alexa.MaxPower),
 		"DestinyJoke":              alexa.DestinyJoke,
+		"CreateLoadout":            alexa.AuthWrapper(alexa.CreateLoadout),
+		"EquipNamedLoadout":        alexa.AuthWrapper(alexa.EquipNamedLoadout),
 		"AMAZON.HelpIntent":        alexa.HelpPrompt,
 	}
 )

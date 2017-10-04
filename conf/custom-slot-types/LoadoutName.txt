@@ -1,0 +1,17 @@
+PVP
+PVE
+raid
+crucible
+trials
+strike
+patrol
+adventure
+public event
+leviathan
+prestige
+prestige nightfall
+nightfall
+faction
+story
+competitive
+quickplay

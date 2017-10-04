@@ -1,6 +1,15 @@
 {
   "intents": [
     {
+      "intent": "AMAZON.CancelIntent"
+    },
+    {
+      "intent": "AMAZON.HelpIntent"
+    },
+    {
+      "intent": "AMAZON.StopIntent"
+    },
+    {
       "slots": [
         {
           "name": "Item",
@@ -30,23 +39,47 @@
       ],
       "intent": "TransferItem"
     },
-	{
-		"intent": "TrialsCurrentMap"
-	},
-	{
-		"intent": "TrialsCurrentWeek"
-  },
-  {
-    "intent": "UnloadEngrams"
-  },
     {
-        "intent": "AMAZON.HelpIntent"
+      "intent": "UnloadEngrams"
     },
     {
-        "intent": "AMAZON.StopIntent"
+      "intent": "EquipMaxLight"
     },
     {
-        "intent": "AMAZON.CancelIntent"
+      "intent": "DestinyJoke"
+    },
+    {
+      "slots": [
+        {
+          "name": "Name",
+          "type": "LOADOUT_NAME"
+        }
+      ],
+      "intent": "CreateLoadout"
+    },
+    {
+      "slots": [
+        {
+          "name": "Name",
+          "type": "LOADOUT_NAME"
+        }
+      ],
+      "intent": "EquipNamedLoadout"
+    },
+    {
+      "intent": "TrialsCurrentMap"
+    },
+    {
+      "intent": "TrialsCurrentWeek"
+    },
+    {
+      "intent": "TrialsPersonalTopWeapons"
+    },
+    {
+      "intent": "TrialsPopularWeaponTypes"
+    },
+    {
+      "intent": "TrialsTopWeapons"
     }
   ]
 }

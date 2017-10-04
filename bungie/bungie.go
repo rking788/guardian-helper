@@ -1,6 +1,8 @@
 package bungie
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -11,7 +13,7 @@ import (
 	"time"
 
 	"github.com/kpango/glg"
-	"github.com/mikeflynn/go-alexa/skillserver"
+	"github.com/rking788/go-alexa/skillserver"
 	"github.com/rking788/guardian-helper/db"
 )
 
@@ -22,7 +24,8 @@ const (
 
 // Equipment bucket type definitions
 const (
-	Kinetic EquipmentBucket = iota
+	_ EquipmentBucket = iota
+	Kinetic
 	Energy
 	Power
 	Ghost
@@ -45,6 +48,7 @@ var itemHashLookup map[string]uint
 var engramHashes map[uint]bool
 var itemMetadata map[uint]*ItemMetadata
 var bucketHashLookup map[EquipmentBucket]uint
+var equipmentBucketLookup map[uint]EquipmentBucket
 var bungieAPIKey string
 
 // InitEnv provides a package level initialization point for any work that is environment specific
@@ -169,6 +173,19 @@ func PopulateBucketHashLookup() error {
 	bucketHashLookup[Legs] = 20886954
 	bucketHashLookup[Artifact] = 434908299
 	bucketHashLookup[ClassArmor] = 1585787867
+
+	equipmentBucketLookup = make(map[uint]EquipmentBucket)
+	equipmentBucketLookup[1498876634] = Kinetic
+	equipmentBucketLookup[2465295065] = Energy
+	equipmentBucketLookup[953998645] = Power
+	equipmentBucketLookup[4023194814] = Ghost
+
+	equipmentBucketLookup[3448274439] = Helmet
+	equipmentBucketLookup[3551918588] = Gauntlets
+	equipmentBucketLookup[14239492] = Chest
+	equipmentBucketLookup[20886954] = Legs
+	equipmentBucketLookup[434908299] = Artifact
+	equipmentBucketLookup[1585787867] = ClassArmor
 
 	return nil
 }
@@ -385,6 +402,136 @@ func UnloadEngrams(accessToken string) (*skillserver.EchoResponse, error) {
 	return response, nil
 }
 
+// CreateLoadoutForCurrentCharacter will create a new PersistedLoadout based on the items equipped
+// to the user's current character and save them to the persistent storage.
+func CreateLoadoutForCurrentCharacter(accessToken, name string, shouldOverwrite bool) (*skillserver.EchoResponse, error) {
+
+	response := skillserver.NewEchoResponse()
+
+	glg.Infof("Creating new loadout named: %s", name)
+	if name == "" {
+		response.OutputSpeech("Sorry Guardian, you need to provide a loadout name based on an " +
+			"activtiy like crucible, strikes, or patrols.")
+		return response, nil
+	}
+
+	client := Clients.Get()
+	client.AddAuthValues(accessToken, bungieAPIKey)
+
+	// TODO: check error
+	currentAccount, _ := client.GetCurrentAccount()
+
+	if currentAccount == nil {
+		glg.Error("Failed to load current account with the specified access token!")
+		return nil, errors.New("Couldn't load the current account")
+	}
+
+	// Check to see if a loadout with this name already exists and prompt for
+	// confirmation to overwrite
+	bnetMembershipID := currentAccount.Response.BungieNetUser.MembershipID
+	if !shouldOverwrite {
+		existing, _ := db.SelectLoadout(bnetMembershipID, name)
+		if existing != "" {
+			// Prompt the user to see if they want to overwrite the existing loadout
+			response.ConfirmIntent("CreateLoadout", nil).
+				OutputSpeech(fmt.Sprintf("You already have a loadout named %s, would you like to overwrite it?", name))
+			return response, nil
+		}
+	}
+
+	// TODO: Figure out how to support multiple accounts, meaning PSN and XBOX,
+	// maybe require it to be specified in the Alexa voice command.
+	membership := currentAccount.Response.DestinyMemberships[0]
+
+	profileResponse, err := client.GetCurrentEquipment(membership.MembershipType,
+		membership.MembershipID)
+	if err != nil {
+		glg.Errorf("Failed to read the Profile response from Bungie!: %s", err.Error())
+		return nil, errors.New("Failed to read current user's profile: " + err.Error())
+	}
+
+	profile := fixupProfileFromProfileResponse(profileResponse)
+	profile.BungieNetMembershipID = bnetMembershipID
+
+	// We want to remove all items that are not on the current character
+	profile.AllItems = profile.AllItems.FilterItems(itemCharacterIDFilter,
+		profile.Characters[0].CharacterID)
+
+	loadout := loadoutFromProfile(profile)
+	glg.Debugf("Created Loadout: %+v", loadout)
+	persistedLoadout := loadout.toPersistedLoadout()
+	persistedBytes, err := json.Marshal(persistedLoadout)
+	if err != nil {
+		glg.Errorf("Failed to marshal the loadout to JSON: %s", err.Error())
+		return nil, err
+	}
+
+	// TODO: This should handle the case where a loadout already exists with this name
+	if shouldOverwrite {
+		db.UpdateLoadout(persistedBytes, bnetMembershipID, name)
+	} else {
+		db.SaveLoadout(persistedBytes, bnetMembershipID, name)
+	}
+
+	response.OutputSpeech("All set Guardian, your " + name + " loadout was saved for you.")
+
+	return response, nil
+}
+
+func EquipNamedLoadout(accessToken, name string) (*skillserver.EchoResponse, error) {
+
+	response := skillserver.NewEchoResponse()
+
+	client := Clients.Get()
+	client.AddAuthValues(accessToken, bungieAPIKey)
+
+	// TODO: check error
+	currentAccount, _ := client.GetCurrentAccount()
+
+	if currentAccount == nil {
+		glg.Error("Failed to load current account with the specified access token!")
+		return nil, errors.New("CLouldn't load the current account")
+	}
+
+	// TODO: Figure out how to support multiple accounts, meaning PSN and XBOX,
+	// maybe require it to be specified in the Alexa voice command.
+	membership := currentAccount.Response.DestinyMemberships[0]
+
+	profileResponse, err := client.GetUserProfileData(membership.MembershipType,
+		membership.MembershipID)
+	if err != nil {
+		glg.Errorf("Failed to read the Profile response from Bungie!: %s", err.Error())
+		return nil, errors.New("Failed to read current user's profile: " + err.Error())
+	}
+
+	profile := fixupProfileFromProfileResponse(profileResponse)
+	profile.BungieNetMembershipID = currentAccount.Response.BungieNetUser.MembershipID
+
+	loadoutJSON, err := db.SelectLoadout(profile.BungieNetMembershipID, name)
+	if err == nil && loadoutJSON == "" {
+		response.OutputSpeech("Sorry Guardian, a loadout could not be found with the name " + name)
+		return response, nil
+	} else if err != nil {
+		glg.Errorf("Failed to read loadout from the database")
+		return nil, err
+	}
+
+	var peristedLoadout PersistedLoadout
+	err = json.NewDecoder(bytes.NewReader([]byte(loadoutJSON))).Decode(&peristedLoadout)
+	if err != nil {
+		glg.Errorf("Failed to decode JSON: %s", err.Error())
+		return nil, err
+	}
+
+	loadout := fromPersistedLoadout(peristedLoadout, profile)
+	equipLoadout(loadout, profile.Characters[0].CharacterID, profile,
+		profile.MembershipType, client)
+
+	response.OutputSpeech("All set Guardian, your " + name + " loadout has been restored!")
+
+	return response, nil
+}
+
 // GetOutboundIP gets preferred outbound ip of this machine
 func GetOutboundIP() net.IP {
 	conn, err := net.Dial("udp", "8.8.8.8:80")
@@ -398,10 +545,12 @@ func GetOutboundIP() net.IP {
 	return localAddr.IP
 }
 
-// transferItem is a generic transfer method that will handle a full transfer of a specific item to the specified
-// character. This requires a full trip from the source, to the vault, and then to the destination character.
-// By providing a nil destCharacter, the items will be transferred to the vault and left there.
-func transferItem(itemSet []*Item, fullCharList []*Character, destCharacter *Character, membershipType int, count int, client *Client) int {
+// transferItem is a generic transfer method that will handle a full transfer of a specific item to
+// the specified character. This requires a full trip from the source, to the vault, and then to the
+// destination character. By providing a nil destCharacter, the items will be transferred to the
+// vault and left there.
+func transferItem(itemSet []*Item, fullCharList []*Character, destCharacter *Character,
+	membershipType int, count int, client *Client) int {
 
 	// TODO: This should probably take the transferStatus field into account,
 	// if the item is NotTransferrable, don't bother trying.
@@ -456,10 +605,11 @@ func transferItem(itemSet []*Item, fullCharList []*Character, destCharacter *Cha
 				transferClient.PostTransferItem(requestBody)
 			}
 
-			// TODO: This could possibly be handled more efficiently if we know the items are uniform,
-			// meaning they all have the same itemHash values, for example (all motes of light or all strange coins)
-			// It is trickier for instances like engrams where each engram type has a different item hash.
-			// Now transfer all of these items from the vault to the destination character
+			// TODO: This could possibly be handled more efficiently if we know the items are
+			// uniform, meaning they all have the same itemHash values, for example (all motes of
+			// light or all strange coins) It is trickier for instances like engrams where each
+			// engram type has a different item hash. Now transfer all of these items from the
+			// vault to the destination character
 			if destCharacter == nil {
 				// If the destination is the vault... then we are done already
 				return
@@ -490,8 +640,10 @@ func transferItem(itemSet []*Item, fullCharList []*Character, destCharacter *Cha
 	return totalCount
 }
 
-// equipItems is a generic equip method that will handle a equipping a specific item on a specific character.
-func equipItems(itemSet []*Item, characterID string, characters CharacterList, membershipType int, client *Client) {
+// equipItems is a generic equip method that will handle a equipping a specific
+// item on a specific character.
+func equipItems(itemSet []*Item, characterID string, characters CharacterList,
+	membershipType int, client *Client) {
 
 	ids := make([]int64, 0, len(itemSet))
 
@@ -520,8 +672,8 @@ func equipItems(itemSet []*Item, characterID string, characters CharacterList, m
 	client.PostEquipItem(equipRequestBody, true)
 }
 
-// TODO: All of these equip/transfer/etc. action should take a single struct with all the parameters required
-// to perform the action, as well as probably a *Client reference.
+// TODO: All of these equip/transfer/etc. action should take a single struct with all the
+// parameters required to perform the action, as well as probably a *Client reference.
 
 // equipItem will take the specified item and equip it on the provided character
 func equipItem(item *Item, character *Character, membershipType int, client *Client) {
@@ -536,13 +688,15 @@ func equipItem(item *Item, character *Character, membershipType int, client *Cli
 	client.PostEquipItem(equipRequestBody, false)
 }
 
-// Profile contains all information about a specific Destiny membership, including character and inventory information.
+// Profile contains all information about a specific Destiny membership, including character and
+// inventory information.
 type Profile struct {
-	MembershipType int
-	MembershipID   string
-	DateLastPlayed time.Time
-	DisplayName    string
-	Characters     CharacterList
+	MembershipType        int
+	MembershipID          string
+	BungieNetMembershipID string
+	DateLastPlayed        time.Time
+	DisplayName           string
+	Characters            CharacterList
 
 	AllItems ItemList
 	// NOTE: Still not sure this is the best approach to flatten items into a single list,
@@ -553,14 +707,16 @@ type Profile struct {
 	//Currencies       ItemList
 }
 
-// ProfileMsg is a wrapper around a Profile struct that should be used exclusively for sending a Profile
-// over a channel, or at least in cases where an error also needs to be sent to indicate failures.
+// ProfileMsg is a wrapper around a Profile struct that should be used exclusively for sending a
+// Profile over a channel, or at least in cases where an error also needs to be sent to indicate
+// failures.
 type ProfileMsg struct {
 	*Profile
 	error
 }
 
-// GetProfileForCurrentUser will retrieve the Profile data for the currently logged in user (determined by the access_token)
+// GetProfileForCurrentUser will retrieve the Profile data for the currently logged in user
+// (determined by the access_token)
 func GetProfileForCurrentUser(client *Client, responseChan chan *ProfileMsg) {
 
 	// TODO: check error
@@ -591,6 +747,7 @@ func GetProfileForCurrentUser(client *Client, responseChan chan *ProfileMsg) {
 	}
 
 	profile := fixupProfileFromProfileResponse(profileResponse)
+	profile.BungieNetMembershipID = currentAccount.Response.BungieNetUser.MembershipID
 
 	for _, char := range profile.Characters {
 		glg.Debugf("Character(%s) last played date: %+v", classHashToName[char.ClassHash], char.DateLastPlayed)
@@ -602,59 +759,100 @@ func GetProfileForCurrentUser(client *Client, responseChan chan *ProfileMsg) {
 	}
 }
 
+func loadoutFromProfile(profile *Profile) Loadout {
+	loadout := make(Loadout)
+	for _, item := range profile.AllItems {
+		glg.Debugf("Found item(%d) for bucket(%d), equipment bucket lookupresult(%d)", item.ItemHash, item.BucketHash, equipmentBucketLookup[item.BucketHash])
+		if equipmentBucket, ok := equipmentBucketLookup[item.BucketHash]; ok {
+			if _, ok := loadout[equipmentBucket]; ok {
+				glg.Debugf("Found duplicate item for bucket: %d", item.BucketHash)
+			}
+			loadout[equipmentBucket] = item
+		}
+	}
+
+	return loadout
+}
+
 func fixupProfileFromProfileResponse(response *GetProfileResponse) *Profile {
-	profile := &Profile{
-		MembershipID:   response.Response.Profile.Data.UserInfo.MembershipID,
-		MembershipType: response.Response.Profile.Data.UserInfo.MembershipType,
+	profile := &Profile{}
+
+	// Profile Component
+	if response.Response.Profile != nil {
+		profile.MembershipID = response.Response.Profile.Data.UserInfo.MembershipID
+		profile.MembershipType = response.Response.Profile.Data.UserInfo.MembershipType
 	}
 
 	// Transform character map into an ordered list based on played time.
-	profile.Characters = make([]*Character, 0, len(response.Response.Characters.Data))
-	for _, char := range response.Response.Characters.Data {
-		profile.Characters = append(profile.Characters, char)
-	}
-
-	sort.Sort(sort.Reverse(LastPlayedSort(profile.Characters)))
-
-	// Flatten out the items from different buckets including currencies, inventories, eequipments, etc.
-	totalItemCount := len(response.Response.ProfileCurrencies.Data.Items) + len(response.Response.ProfileInventory.Data.Items)
-	for id := range response.Response.Characters.Data {
-		totalItemCount += len(response.Response.CharacterEquipment.Data[id].Items)
-		totalItemCount += len(response.Response.CharacterInventories.Data[id].Items)
-	}
-
-	items := make(ItemList, 0, totalItemCount)
-
-	items = append(items, response.Response.ProfileCurrencies.Data.Items...)
-
-	for _, item := range response.Response.ProfileInventory.Data.Items {
-		if item.InstanceID != "" {
-			item.ItemInstance = response.Response.ItemComponents.Instances.Data[item.InstanceID]
+	// Characters Component
+	if response.Response.Characters != nil {
+		profile.Characters = make([]*Character, 0, len(response.Response.Characters.Data))
+		for _, char := range response.Response.Characters.Data {
+			profile.Characters = append(profile.Characters, char)
 		}
-	}
-	items = append(items, response.Response.ProfileInventory.Data.Items...)
 
-	for charID, list := range response.Response.CharacterEquipment.Data {
-		for _, item := range list.Items {
-			item.Character = response.Response.Characters.Data[charID]
+		sort.Sort(sort.Reverse(LastPlayedSort(profile.Characters)))
+	}
+
+	// Flatten out the items from different buckets including currencies, inventories, eequipments,
+	// etc.
+	//totalItemCount := len(response.Response.ProfileCurrencies.Data.Items) + len(response.Response.ProfileInventory.Data.Items)
+	// for id := range response.Response.Characters.Data {
+	// 	totalItemCount += len(response.Response.CharacterEquipment.Data[id].Items)
+	// 	totalItemCount += len(response.Response.CharacterInventories.Data[id].Items)
+	// }
+
+	items := make(ItemList, 0, 32)
+
+	// ProfileCurrencies Component
+	if response.Response.ProfileCurrencies != nil {
+		items = append(items, response.Response.ProfileCurrencies.Data.Items...)
+	}
+
+	// ProfileInventory Component
+	if response.Response.ProfileInventory != nil {
+		for _, item := range response.Response.ProfileInventory.Data.Items {
 			if item.InstanceID != "" {
 				item.ItemInstance = response.Response.ItemComponents.Instances.Data[item.InstanceID]
 			}
 		}
-
-		items = append(items, list.Items...)
+		items = append(items, response.Response.ProfileInventory.Data.Items...)
 	}
 
-	for charID, list := range response.Response.CharacterInventories.Data {
-		for _, item := range list.Items {
-			item.Character = response.Response.Characters.Data[charID]
-			if item.InstanceID != "" {
-				item.ItemInstance = response.Response.ItemComponents.Instances.Data[item.InstanceID]
+	// CharacterEquipment Component
+	if response.Response.CharacterEquipment != nil {
+		for charID, list := range response.Response.CharacterEquipment.Data {
+			for _, item := range list.Items {
+				if response.Response.Characters != nil {
+					item.Character = response.Response.Characters.Data[charID]
+				}
+				if item.InstanceID != "" && response.Response.ItemComponents != nil &&
+					response.Response.ItemComponents.Instances != nil {
+					item.ItemInstance = response.Response.ItemComponents.Instances.Data[item.InstanceID]
+				}
 			}
+
+			items = append(items, list.Items...)
 		}
-		items = append(items, list.Items...)
+	}
+
+	// CharacterInventories Component
+	if response.Response.CharacterInventories != nil {
+		for charID, list := range response.Response.CharacterInventories.Data {
+			for _, item := range list.Items {
+				if response.Response.Characters != nil {
+					item.Character = response.Response.Characters.Data[charID]
+				}
+				if item.InstanceID != "" && response.Response.ItemComponents != nil &&
+					response.Response.ItemComponents.Instances != nil {
+					item.ItemInstance = response.Response.ItemComponents.Instances.Data[item.InstanceID]
+				}
+			}
+			items = append(items, list.Items...)
+		}
 	}
 
 	profile.AllItems = items
+
 	return profile
 }

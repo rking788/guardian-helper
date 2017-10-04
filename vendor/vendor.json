@@ -6,10 +6,10 @@
 	"ignore": "test",
 	"package": [
 		{
-			"checksumSHA1": "NQWrITjQCpJdsRzaPQIsfClTF6M=",
+			"checksumSHA1": "yTxfr36sEqdDSoqXaV5aMmTyLrc=",
 			"path": "github.com/codegangsta/negroni",
-			"revision": "1d8981a52d6bda4467a9faacf3fdddd38222dfc4",
-			"revisionTime": "2017-05-06T02:27:41Z"
+			"revision": "423835657b6c73d9d894487168624f4ae7b1cc64",
+			"revisionTime": "2017-09-27T16:23:36Z"
 		},
 		{
 			"checksumSHA1": "2UmMbNHc8FBr98mJFN1k8ISOIHk=",
@@ -30,10 +30,10 @@
 			"revisionTime": "2016-08-17T18:46:32Z"
 		},
 		{
-			"checksumSHA1": "m+Xb6aeLpAjIjq9Utnicv+e96TQ=",
+			"checksumSHA1": "HEEx7LDDtZ8vwZauJtzdTc/uDa8=",
 			"path": "github.com/gorilla/mux",
-			"revision": "043ee6597c29786140136a5747b6a886364f5282",
-			"revisionTime": "2017-05-24T00:31:38Z"
+			"revision": "3f19343c7d9ce75569b952758bd236af94956061",
+			"revisionTime": "2017-09-22T20:54:14Z"
 		},
 		{
 			"checksumSHA1": "9N99ux5sWxPsXXfJt96o8T5hV4c=",
@@ -64,6 +64,12 @@
 			"path": "github.com/mikeflynn/go-alexa/skillserver",
 			"revision": "107980aa6911cf257d62f5d4e9d575e88fde29e4",
 			"revisionTime": "2017-07-19T02:51:28Z"
+		},
+		{
+			"checksumSHA1": "w6g+LuTevYTEy2ZAwJk5OOFGFes=",
+			"path": "github.com/rking788/go-alexa/skillserver",
+			"revision": "6e6f2c162f01cb3d45c6feb67053d56b3d9d90c7",
+			"revisionTime": "2017-10-03T02:32:01Z"
 		}
 	],
 	"rootPath": "github.com/rking788/guardian-helper"

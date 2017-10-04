@@ -6,8 +6,22 @@ import (
 	"github.com/kpango/glg"
 )
 
-// Loadout will hold all items for a unique set of weapons, armor, ghost, class item, and artifact
+// Loadout will hold all items for a unique set of weapons, armor, ghost, class
+// item, and artifact
 type Loadout map[EquipmentBucket]*Item
+
+// PersistedItem represents the data from a specific Item entry that should be
+// persisted. Not all of the Item data should be stored as most of it
+// could/will change by the time it is read back from persistent storage
+type PersistedItem struct {
+	ItemHash   uint   `json:"itemHash"`
+	InstanceID string `json:"itemInstanceId"`
+	BucketHash uint   `json:"bucketHash"`
+}
+
+// PersistedLoadout stores all of the PersistedItem entries that should be saved
+// for a particular loadout.
+type PersistedLoadout map[EquipmentBucket]*PersistedItem
 
 func (l Loadout) calculateLightLevel() float64 {
 
@@ -32,6 +46,53 @@ func (l Loadout) toSlice() []*Item {
 	result := make([]*Item, 0, ClassArmor-Kinetic)
 	for i := Kinetic; i <= ClassArmor; i++ {
 		result = append(result, l[i])
+	}
+
+	return result
+}
+
+func (l Loadout) toPersistedLoadout() PersistedLoadout {
+
+	persisted := make(PersistedLoadout)
+	for equipmentBucket, item := range l {
+		persisted[equipmentBucket] = &PersistedItem{
+			ItemHash:   item.ItemHash,
+			InstanceID: item.InstanceID,
+			BucketHash: item.BucketHash,
+		}
+
+	}
+
+	return persisted
+}
+
+// fromPersistedLoadout is responsible for searching through the Profile and
+// equipping the weapons described in the PersistedLoadout. A best attempt will
+// be made to equip the same instances of the gear persisted but as a fallback
+// the same item hashes could be used. That way if the user deleted one
+// instance of a weapon they will still get that weapon equipped if they picked
+// up a new instance of one.
+func fromPersistedLoadout(persisted PersistedLoadout, profile *Profile) Loadout {
+
+	result := make(Loadout)
+	for equipmentBucket, item := range persisted {
+		sameHashList := profile.AllItems.FilterItems(itemHashFilter, item.ItemHash)
+		if len(sameHashList) <= 0 {
+			glg.Warnf("Item(%v) not in profile when restoring loadout", item.ItemHash)
+			result[equipmentBucket] = nil
+			continue
+		}
+
+		bestMatchItem := sameHashList[0]
+		exactInstances := sameHashList.FilterItems(itemInstanceIDFilter, item.InstanceID)
+
+		if len(exactInstances) > 0 {
+			bestMatchItem = exactInstances[0]
+		} else {
+			glg.Warnf("Items sharing an instanceID(%v) in persisted loadout", item.ItemHash)
+		}
+
+		result[equipmentBucket] = bestMatchItem
 	}
 
 	return result
@@ -104,9 +165,15 @@ func findMaxLightLoadout(profile *Profile, destinationID string) Loadout {
 func equipLoadout(loadout Loadout, destinationID string, profile *Profile, membershipType int, client *Client) error {
 
 	characters := profile.Characters
-	// Swap any items that are currently equipped on other characters to prepare them to be transferred
+	// Swap any items that are currently equipped on other characters to
+	// prepare them to be transferred
 	for bucket, item := range loadout {
-		if item.TransferStatus == ItemIsEquipped && item.Character.CharacterID != destinationID {
+		if item == nil {
+			glg.Warnf("Found nil item for bucket: %v", bucket)
+			continue
+		}
+		if item.TransferStatus == ItemIsEquipped && item.Character != nil &&
+			item.Character.CharacterID != destinationID {
 			swapEquippedItem(item, profile, bucket, membershipType, client)
 		}
 	}

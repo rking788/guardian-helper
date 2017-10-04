@@ -17,12 +17,15 @@ const (
 )
 
 type LookupDB struct {
-	Database         *sql.DB
-	HashFromNameStmt *sql.Stmt
-	NameFromHashStmt *sql.Stmt
-	EngramHashStmt   *sql.Stmt
-	ItemMetadataStmt *sql.Stmt
-	RandomJokeStmt   *sql.Stmt
+	Database          *sql.DB
+	HashFromNameStmt  *sql.Stmt
+	NameFromHashStmt  *sql.Stmt
+	EngramHashStmt    *sql.Stmt
+	ItemMetadataStmt  *sql.Stmt
+	RandomJokeStmt    *sql.Stmt
+	InsertLoadoutStmt *sql.Stmt
+	UpdateLoadoutStmt *sql.Stmt
+	SelectLoadoutStmt *sql.Stmt
 }
 
 var db1 *LookupDB
@@ -73,13 +76,34 @@ func InitDatabase() error {
 		return err
 	}
 
+	insertLoadoutStmt, err := db.Prepare("INSERT INTO loadouts VALUES ($1,$2,$3)")
+	if err != nil {
+		glg.Errorf("Error preparing insert loadout statement: %s", err.Error())
+		return err
+	}
+
+	updateLoadoutStmt, err := db.Prepare("UPDATE loadouts SET loadout=$1 WHERE bungie_membership_id=$2 AND name=$3")
+	if err != nil {
+		glg.Errorf("Failed preparing update loadout statement: %s", err.Error())
+		return err
+	}
+
+	selectLoadoutStmt, err := db.Prepare("SELECT loadout FROM loadouts WHERE bungie_membership_id=$1 AND name=$2")
+	if err != nil {
+		glg.Errorf("Error preparing the select loadout statement: %s", err.Error())
+		return err
+	}
+
 	db1 = &LookupDB{
-		Database:         db,
-		HashFromNameStmt: stmt,
-		NameFromHashStmt: nameFromHashStmt,
-		EngramHashStmt:   engramHashStmt,
-		ItemMetadataStmt: itemMetadataStmt,
-		RandomJokeStmt:   randomJokeStmt,
+		Database:          db,
+		HashFromNameStmt:  stmt,
+		NameFromHashStmt:  nameFromHashStmt,
+		EngramHashStmt:    engramHashStmt,
+		ItemMetadataStmt:  itemMetadataStmt,
+		RandomJokeStmt:    randomJokeStmt,
+		InsertLoadoutStmt: insertLoadoutStmt,
+		UpdateLoadoutStmt: updateLoadoutStmt,
+		SelectLoadoutStmt: selectLoadoutStmt,
 	}
 
 	return nil
@@ -190,6 +214,56 @@ func GetItemNameFromHash(itemHash string) (string, error) {
 	}
 
 	return name, nil
+}
+
+// SaveLoadout is responsible for persisting the provided serialized loadout to the database.
+func SaveLoadout(loadoutJSON []byte, membershipID, name string) error {
+
+	db, err := GetDBConnection()
+	if err != nil {
+		return err
+	}
+
+	_, err = db.InsertLoadoutStmt.Exec(membershipID, name, string(loadoutJSON))
+
+	return err
+}
+
+// UpdateLoadout can be used to update an existing loadout by membership ID and loadout name
+// this should be used after confirming with the user that they want to update a loadout
+// with a spepcific name.
+func UpdateLoadout(loadoutJSON []byte, membershipID, name string) error {
+
+	db, err := GetDBConnection()
+	if err != nil {
+		return err
+	}
+
+	_, err = db.UpdateLoadoutStmt.Exec(string(loadoutJSON), membershipID, name)
+
+	return err
+}
+
+// SelectLoadout is responsible for querying the database for a loadout with the provided membership ID
+// and loadout name. The return value is the JSON string for the loadout requested.
+func SelectLoadout(membershipID, name string) (string, error) {
+
+	db, err := GetDBConnection()
+	if err != nil {
+		return "", err
+	}
+
+	row := db.SelectLoadoutStmt.QueryRow(membershipID, name)
+
+	var loadout string
+	err = row.Scan(&loadout)
+	if err == sql.ErrNoRows {
+		return "", nil
+	} else if err != nil {
+		return "", err
+	}
+
+	return loadout, nil
 }
 
 // InsertUnknownValueIntoTable is a helper method for inserting a value into the specified table.

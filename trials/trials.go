@@ -14,7 +14,7 @@ import (
 	"bytes"
 
 	"github.com/kpango/glg"
-	"github.com/mikeflynn/go-alexa/skillserver"
+	"github.com/rking788/go-alexa/skillserver"
 	"github.com/rking788/guardian-helper/bungie"
 	"github.com/rking788/guardian-helper/db"
 )

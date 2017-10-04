@@ -6,7 +6,20 @@ import (
 	"io/ioutil"
 	"os"
 	"testing"
+
+	"github.com/kpango/glg"
+
+	"github.com/rking788/guardian-helper/db"
 )
+
+func setup() {
+	glg.Get().SetLevelMode(glg.DEBG, glg.NONE)
+	glg.Get().SetLevelMode(glg.INFO, glg.NONE)
+	glg.Get().SetLevelMode(glg.WARN, glg.NONE)
+
+	db.InitEnv(os.Getenv("DATABASE_URL"))
+	InitEnv("")
+}
 
 // NOTE: Never run this while using the bungie.net URLs in bungie/constants.go
 // those should be changed to a localhost webserver that returns static results.
@@ -27,7 +40,7 @@ import (
 // }
 
 func BenchmarkFiltering(b *testing.B) {
-	PopulateItemMetadata()
+	setup()
 	profileResponse, err := getCurrentProfileResponse()
 	if err != nil {
 		b.FailNow()
@@ -44,8 +57,7 @@ func BenchmarkFiltering(b *testing.B) {
 }
 
 func BenchmarkMaxLight(b *testing.B) {
-	PopulateItemMetadata()
-	PopulateBucketHashLookup()
+	setup()
 	profileResponse, err := getCurrentProfileResponse()
 	if err != nil {
 		b.FailNow()
@@ -62,6 +74,7 @@ func BenchmarkMaxLight(b *testing.B) {
 }
 
 func BenchmarkGroupAndSort(b *testing.B) {
+	setup()
 	response, err := getCurrentProfileResponse()
 	if err != nil {
 		b.FailNow()
@@ -79,6 +92,7 @@ func BenchmarkGroupAndSort(b *testing.B) {
 }
 
 func BenchmarkBestItemForBucket(b *testing.B) {
+	setup()
 	response, err := getCurrentProfileResponse()
 	if err != nil {
 		b.FailNow()
@@ -105,6 +119,7 @@ func BenchmarkBestItemForBucket(b *testing.B) {
 }
 
 func BenchmarkFixupProfileFromProfileResponse(b *testing.B) {
+	setup()
 	response, err := getCurrentProfileResponse()
 	if err != nil {
 		b.FailNow()
@@ -120,7 +135,37 @@ func BenchmarkFixupProfileFromProfileResponse(b *testing.B) {
 	}
 }
 
+func BenchmarkLoadoutFromProfile(b *testing.B) {
+	setup()
+
+	setup()
+	response, err := getCurrentProfileResponse()
+	if err != nil {
+		b.FailNow()
+	}
+	response.Response.CharacterInventories = nil
+	response.Response.ProfileInventory = nil
+	response.Response.ProfileCurrencies = nil
+	response.Response.Profile = nil
+	response.Response.ItemComponents = nil
+
+	profile := fixupProfileFromProfileResponse(response)
+	if profile == nil {
+		b.FailNow()
+	}
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		loadout := loadoutFromProfile(profile)
+		if loadout == nil {
+			b.FailNow()
+		}
+	}
+}
+
 func TestParseCurrentMembershipsResponse(t *testing.T) {
+	setup()
 	data, err := readSample("GetMembershipsForCurrentUser.json")
 	if err != nil {
 		fmt.Println("Error reading sample file: ", err.Error())
@@ -153,7 +198,7 @@ func TestParseCurrentMembershipsResponse(t *testing.T) {
 }
 
 func TestParseGetProfileResponse(t *testing.T) {
-
+	setup()
 	response, err := getCurrentProfileResponse()
 	if err != nil {
 		t.FailNow()
@@ -193,6 +238,7 @@ func TestParseGetProfileResponse(t *testing.T) {
 
 func TestFixupProfileFromProfileResponse(t *testing.T) {
 
+	setup()
 	response, err := getCurrentProfileResponse()
 	if err != nil {
 		t.FailNow()
@@ -204,6 +250,139 @@ func TestFixupProfileFromProfileResponse(t *testing.T) {
 	}
 
 	//fmt.Println("Loaded items: ", profile.AllItems)
+}
+
+func TestFixupProfileFromProfileResponseMissingProfile(t *testing.T) {
+
+	setup()
+	response, err := getCurrentProfileResponse()
+	if err != nil {
+		t.FailNow()
+	}
+	response.Response.Profile = nil
+
+	profile := fixupProfileFromProfileResponse(response)
+	if profile == nil {
+		t.FailNow()
+	}
+
+	if profile.MembershipID != "" {
+		t.FailNow()
+	}
+	if profile.MembershipType != 0 {
+		t.FailNow()
+	}
+
+	//fmt.Println("Loaded items: ", profile.AllItems)
+}
+
+func TestFixupProfileFromProfileResponseMissingProfileInventory(t *testing.T) {
+
+	setup()
+	response, err := getCurrentProfileResponse()
+	if err != nil {
+		t.FailNow()
+	}
+	response.Response.ProfileInventory = nil
+
+	profile := fixupProfileFromProfileResponse(response)
+	if profile == nil {
+		t.FailNow()
+	}
+}
+
+func TestFixupProfileFromProfileResponseMissingCharacters(t *testing.T) {
+
+	setup()
+	response, err := getCurrentProfileResponse()
+	if err != nil {
+		t.FailNow()
+	}
+	response.Response.Characters = nil
+
+	profile := fixupProfileFromProfileResponse(response)
+	if profile == nil {
+		t.FailNow()
+	}
+
+	if profile.Characters != nil {
+		t.FailNow()
+	}
+
+	for _, item := range profile.AllItems {
+		if item.Character != nil {
+			t.FailNow()
+		}
+	}
+}
+
+func TestFixupProfileFromProfileResponseMissingCharacterEquipment(t *testing.T) {
+
+	setup()
+	response, err := getCurrentProfileResponse()
+	if err != nil {
+		t.FailNow()
+	}
+	response.Response.CharacterEquipment = nil
+
+	profile := fixupProfileFromProfileResponse(response)
+	if profile == nil {
+		t.FailNow()
+	}
+
+	for _, item := range profile.AllItems {
+		if item.ItemInstance != nil && item.IsEquipped == true {
+			t.FailNow()
+		}
+	}
+}
+
+func TestFixupProfileFromProfileResponseMissingCharacterInventories(t *testing.T) {
+
+	setup()
+	response, err := getCurrentProfileResponse()
+	if err != nil {
+		t.FailNow()
+	}
+	response.Response.CharacterInventories = nil
+
+	profile := fixupProfileFromProfileResponse(response)
+	if profile == nil {
+		t.FailNow()
+	}
+}
+
+func TestLoadoutFromProfile(t *testing.T) {
+	setup()
+
+	setup()
+	response, err := getCurrentProfileResponse()
+	if err != nil {
+		t.FailNow()
+	}
+
+	response.Response.CharacterInventories = nil
+	response.Response.ProfileInventory = nil
+	response.Response.ProfileCurrencies = nil
+	response.Response.Profile = nil
+	response.Response.ItemComponents = nil
+
+	profile := fixupProfileFromProfileResponse(response)
+	if profile == nil {
+		t.FailNow()
+	}
+
+	loadout := loadoutFromProfile(profile)
+
+	for equipmentBucket, item := range loadout {
+		if item == nil {
+			t.FailNow()
+		}
+
+		if _, ok := bucketHashLookup[equipmentBucket]; !ok {
+			t.FailNow()
+		}
+	}
 }
 
 func getCurrentProfileResponse() (*GetProfileResponse, error) {

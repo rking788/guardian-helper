@@ -35,7 +35,9 @@ type CurrentUserMembershipsResponse struct {
 			MembershipType int    `json:"membershipType"`
 			MembershipID   string `json:"membershipId"`
 		} `json:"destinyMemberships"`
-		BungieNetUser interface{} `json:"bungieNetUser"`
+		BungieNetUser *struct {
+			MembershipID string `json:"membershipId"`
+		} `json:"bungieNetUser"`
 	} `json:"Response"`
 }
 
@@ -242,6 +244,33 @@ func (c *Client) GetUserProfileData(membershipType int, membershipID string) (*G
 	vals.Add("components", strings.Join([]string{ProfilesComponent,
 		ProfileInventoriesComponent, ProfileCurrenciesComponent, CharactersComponent,
 		CharacterInventoriesComponent, CharacterEquipmentComponent, ItemInstancesComponent}, ","))
+
+	// Add required headers and query string parameters
+	req.Header.Add("Content-Type", "application/json")
+	c.AddAuthHeadersToRequest(req)
+	req.URL.RawQuery = vals.Encode()
+
+	profileResponse, err := c.Client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer profileResponse.Body.Close()
+
+	profile := &GetProfileResponse{}
+	json.NewDecoder(profileResponse.Body).Decode(profile)
+
+	return profile, nil
+}
+
+func (c *Client) GetCurrentEquipment(membershipType int, membershipID string) (*GetProfileResponse, error) {
+
+	glg.Debugf("Client local address: %s", c.Address)
+
+	endpoint := fmt.Sprintf(GetProfileEndpointFormat, membershipType, membershipID)
+
+	req, _ := http.NewRequest("GET", endpoint, nil)
+	vals := url.Values{}
+	vals.Add("components", strings.Join([]string{CharactersComponent, CharacterEquipmentComponent, ItemInstancesComponent}, ","))
 
 	// Add required headers and query string parameters
 	req.Header.Add("Content-Type", "application/json")

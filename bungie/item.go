@@ -1,6 +1,10 @@
 package bungie
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/kpango/glg"
+)
 
 //Item represents a single inventory item returned usually by the GetProfile endpoint
 type Item struct {
@@ -154,9 +158,22 @@ func itemNotTierTypeFilter(item *Item, tierType interface{}) bool {
 	return itemMetadata[item.ItemHash].TierType != tierType.(int)
 }
 
+// itemInstanceIDFilter is an item filter that will return true for all items with an
+// instanceID property equal to the one provided. This is useful for filtering a list
+// down to a specific instance of an item.
+func itemInstanceIDFilter(item *Item, instanceID interface{}) bool {
+	return item.InstanceID == instanceID.(string)
+}
+
 // itemClassTypeFilter will filter out all items that are not equippable by the specified class
 func itemClassTypeFilter(item *Item, classType interface{}) bool {
 	// TODO: Is this correct? 3 is UNKNOWN class type, that seems to be what is used for class agnostic items.
-	return (itemMetadata[item.ItemHash].ClassType == 3) ||
-		(itemMetadata[item.ItemHash].ClassType == classType.(int))
+	metadata, ok := itemMetadata[item.ItemHash]
+	if !ok {
+		glg.Warnf("No metadata found for item: %s", item.ItemHash)
+		return false
+	}
+
+	return (metadata.ClassType == 3) ||
+		(metadata.ClassType == classType.(int))
 }

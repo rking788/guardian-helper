@@ -30,7 +30,7 @@ func NewEnvConfig() *EnvConfig {
 		BungieAPIKey: os.Getenv("BUNGIE_API_KEY"),
 		DatabaseURL:  os.Getenv("DATABASE_URL"),
 		AlexaAppID:   os.Getenv("ALEXA_APP_ID"),
-		LogLevel:     "debug",
+		LogLevel:     os.Getenv("GUARDIAN_HELPER_LOG_LEVEL"),
 	}
 
 	return config
