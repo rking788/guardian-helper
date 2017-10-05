@@ -343,6 +343,9 @@ func EquipMaxLightGear(accessToken string) (*skillserver.EchoResponse, error) {
 	destinationID := msg.Profile.Characters[0].CharacterID
 	membershipType := msg.Profile.MembershipType
 
+	glg.Debugf("Character(%s), MembershipID(%s), MembershipType(%d)",
+		msg.Profile.Characters[0].CharacterID, msg.Profile.MembershipID, msg.Profile.MembershipType)
+
 	loadout := findMaxLightLoadout(msg.Profile, destinationID)
 
 	glg.Debugf("Found loadout to equip: %v", loadout)
@@ -651,6 +654,7 @@ func equipItems(itemSet []*Item, characterID string, characters CharacterList,
 
 		if item.TransferStatus == ItemIsEquipped && item.Character.CharacterID == characterID {
 			// If this item is already equipped, skip it.
+			glg.Debugf("Not equipping item because it is already equipped on the current character: %s", item.InstanceID)
 			continue
 		}
 
@@ -661,6 +665,8 @@ func equipItems(itemSet []*Item, characterID string, characters CharacterList,
 		}
 		ids = append(ids, instanceID)
 	}
+
+	glg.Debugf("Equipping items: %+v", ids)
 
 	equipRequestBody := map[string]interface{}{
 		"itemIds":        ids,
@@ -677,7 +683,7 @@ func equipItems(itemSet []*Item, characterID string, characters CharacterList,
 
 // equipItem will take the specified item and equip it on the provided character
 func equipItem(item *Item, character *Character, membershipType int, client *Client) {
-	glg.Debugf("Equipping item(%d)...", item.ItemHash)
+	glg.Debugf("Equipping item(%d, %d)...", item.ItemHash, item.InstanceID)
 
 	equipRequestBody := map[string]interface{}{
 		"itemId":         item.InstanceID,

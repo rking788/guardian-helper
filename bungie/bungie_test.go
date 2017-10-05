@@ -403,7 +403,7 @@ func getCurrentProfileResponse() (*GetProfileResponse, error) {
 }
 
 func readSample(name string) ([]byte, error) {
-	f, err := os.Open("../local_tools/samples/" + name)
+	f, err := os.Open("../test_data/bungie/" + name)
 	if err != nil {
 		return nil, err
 	}
