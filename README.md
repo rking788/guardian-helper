@@ -5,6 +5,7 @@ Guardian Helper
 
 Guardian Helper is an Alexa skill that allows players of the game Destiny (guardians) to manage their in-game inventory. Currently the skill provides the following functionality:
 
+- Create new named loadouts that are named after activity types
 - Equip max light loadout on current character
 - Ask Guardian Helper to tell you a joke
 - Move all engrams off characters and into the vault
