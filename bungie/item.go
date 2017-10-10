@@ -116,7 +116,7 @@ func (items ItemList) FilterItems(filter ItemFilter, arg interface{}) ItemList {
 
 // itemHashFilter will return true if the itemHash provided matches the hash of the item; otherwise false.
 func itemHashFilter(item *Item, itemHash interface{}) bool {
-	return item.ItemHash == itemHash.(uint)
+	return item != nil && (item.ItemHash == itemHash.(uint))
 }
 
 // itemHashesFilter will return true if the item's hash value is present in the provided slice of hashes;
@@ -131,31 +131,43 @@ func itemHashesFilter(item *Item, hashList interface{}) bool {
 
 // itemBucketHashIncludingVaultFilter will filter the list of items by the specified bucket hash or the Vault location
 func itemBucketHashFilter(item *Item, bucketTypeHash interface{}) bool {
-	return itemMetadata[item.ItemHash].BucketHash == bucketTypeHash.(uint)
+	metadata, ok := itemMetadata[item.ItemHash]
+	if !ok {
+		glg.Warnf("No metadata found for item: %s", item.ItemHash)
+		return false
+	}
+
+	return metadata.BucketHash == bucketTypeHash.(uint)
 }
 
 // itemCharacterIDFilter will filter the list of items by the specified character identifier
 func itemCharacterIDFilter(item *Item, characterID interface{}) bool {
-	return item.Character.CharacterID == characterID.(string)
+	return item.Character != nil && (item.Character.CharacterID == characterID.(string))
 }
 
 // itemIsEngramFilter will return true if the item represents an engram; otherwise false.
 func itemIsEngramFilter(item *Item, wantEngram interface{}) bool {
-	isEngram := false
-	if _, ok := engramHashes[item.ItemHash]; ok {
-		isEngram = true
-	}
-
+	_, isEngram := engramHashes[item.ItemHash]
 	return isEngram == wantEngram.(bool)
 }
 
 // itemTierTypeFilter is a filter that will filter out items that are not of the specified tier.
 func itemTierTypeFilter(item *Item, tierType interface{}) bool {
-	return itemMetadata[item.ItemHash].TierType == tierType.(int)
+	metadata, ok := itemMetadata[item.ItemHash]
+	if !ok {
+		glg.Warnf("No metadata found for item: %s", item.ItemHash)
+		return false
+	}
+	return metadata.TierType == tierType.(int)
 }
 
 func itemNotTierTypeFilter(item *Item, tierType interface{}) bool {
-	return itemMetadata[item.ItemHash].TierType != tierType.(int)
+	metadata, ok := itemMetadata[item.ItemHash]
+	if !ok {
+		glg.Warnf("No metadata found for item: %s", item.ItemHash)
+		return false
+	}
+	return metadata.TierType != tierType.(int)
 }
 
 // itemInstanceIDFilter is an item filter that will return true for all items with an

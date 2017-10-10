@@ -270,7 +270,6 @@ func CreateLoadout(request *skillserver.EchoRequest) (response *skillserver.Echo
 
 	response = skillserver.NewEchoResponse()
 
-	// STARTED, IN_PROGRESS, COMPLETED
 	glg.Debugf("Found dialog state = %s", request.GetDialogState())
 	if request.GetDialogState() != skillserver.DialogCompleted {
 		// The user still needs to provide a name for the new loadout to be created
@@ -280,7 +279,7 @@ func CreateLoadout(request *skillserver.EchoRequest) (response *skillserver.Echo
 
 	glg.Debugf("Found intent confirmation status = %s", request.GetIntentConfirmationStatus())
 	intentConfirmation := request.GetIntentConfirmationStatus()
-	if intentConfirmation == "DENIED" {
+	if intentConfirmation == skillserver.ConfirmationDenied {
 		// The user does NOT want to overwrite the existing loadout with the same name
 		return
 	}

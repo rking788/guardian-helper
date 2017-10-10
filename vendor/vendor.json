@@ -66,10 +66,10 @@
 			"revisionTime": "2017-07-19T02:51:28Z"
 		},
 		{
-			"checksumSHA1": "w6g+LuTevYTEy2ZAwJk5OOFGFes=",
+			"checksumSHA1": "4r4riJT5c3X4tuY3baAtWcdk9+E=",
 			"path": "github.com/rking788/go-alexa/skillserver",
-			"revision": "6e6f2c162f01cb3d45c6feb67053d56b3d9d90c7",
-			"revisionTime": "2017-10-03T02:32:01Z"
+			"revision": "e210632f6d9ff115bf0e9520363f91a8cb9e6890",
+			"revisionTime": "2017-10-10T01:47:13Z"
 		}
 	],
 	"rootPath": "github.com/rking788/guardian-helper"
