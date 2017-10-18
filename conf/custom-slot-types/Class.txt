@@ -1,4 +1,0 @@
-warlock
-titan
-hunter
-vault
